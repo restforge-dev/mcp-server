@@ -13,6 +13,22 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+/**
+ * Mirror of the CLI's own payload lookup for the dashboard command
+ * (PayloadValidator.findPayloadFile): the value is used verbatim, first under
+ * '<cwd>/payload/', then under '<cwd>'. No extension is appended anywhere —
+ * that is exactly why the pre-flight must not normalise the argument either.
+ * Deliberately local to the dashboard tools: create-endpoint and the other
+ * codegen tools keep their own extensionless convention, so a shared helper
+ * would change their behaviour too.
+ */
+async function resolvePayloadPath(projectCwd: string, payload: string): Promise<string | null> {
+  for (const candidate of [join(projectCwd, 'payload', payload), join(projectCwd, payload)]) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function registerCodegenCreateDashboard(server: McpServer): void {
   server.registerTool(
     'codegen_create_dashboard',
@@ -22,13 +38,20 @@ export function registerCodegenCreateDashboard(server: McpServer): void {
 
 Dashboards differ structurally from CRUD endpoints: there is no table, no fieldValidation, no CRUD actions. The payload declares a 'widgets' array — each widget owns SQL aggregation queries that are embedded into the generated module file and executed in parallel at request time, returning a JSON envelope keyed by widget id.
 
-This tool is DESTRUCTIVE: it spawns the CLI which writes / overwrites files in 'src/modules/<project>.js' and 'src/modules/<project>/<name>.js', plus 'metadata/<project>/<name>.json' and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode. Internally the tool always passes '--force=true' to the CLI to bypass the CLI's interactive y/N readline prompt (which would deadlock in a no-TTY subprocess).
+This tool is DESTRUCTIVE: it spawns the CLI which writes / overwrites files in 'src/modules/<project>.js' and 'src/modules/<project>/<name>.js', plus 'metadata/<project>/<name>.json' and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode. To check a payload without writing anything, run 'codegen_validate_dashboard_payload' first.
+
+The 'force' parameter controls the overwrite gate and defaults to TRUE, which reproduces the previous behaviour: an existing dashboard module IS overwritten (the CLI archives the previous version first — see the safety net below). Passing force=false gives a non-overwrite path. Unlike 'codegen_create_endpoint', the dashboard command never asks an interactive y/N question: every conflict on the non-force path ends in a clean error with a non-zero exit code, reported by this tool as a failure.
+- When nothing conflicts, the CLI generates normally — same result as force=true.
+- When the dashboard module file already exists, the CLI stops with "Dashboard module already exists at '<path>'. Pass options.force=true to overwrite." and writes nothing.
+- When the project is already registered with a different database type, the CLI stops with "Cannot change to '<db>' without --force." and writes nothing.
+- The shared main module 'src/modules/<project>.js' is left alone when it already exists; the CLI skips it instead of failing, on both paths.
+Consequence of the default worth knowing: with force=true the CLI re-registers the project under whatever 'database' value this call carries, replacing the dialect recorded earlier in '.restforge/projects.json' without warning. Use force=false when the goal is to find out whether the dashboard already exists, or when the registered database type must not change.
 
 Safety net: when the CLI overwrites an existing dashboard module, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
 
 Database type: the 'dashboard create' CLI handler resolves the dialect with a plain default only — the value of '--database' when given, otherwise postgres. It does NOT read DB_TYPE from the active config, so there is no auto-detection to fall back on here (this differs from 'codegen_create_endpoint', which does auto-detect). Ask for or infer the project's actual database and pass it whenever the project is not postgres; the dialect is baked into the SQL of the generated module.
 
-AI responsibility — IMPORTANT: because this tool always executes and may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
+AI responsibility — IMPORTANT: because this tool always executes and, with the default force=true, may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
 - "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
 - "I will generate <name> under project <project>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
 
@@ -58,7 +81,7 @@ Cross-reference: this tool is sibling of 'codegen_create_endpoint'. Both generat
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist at <cwd>/payload/<payload>.json before calling this tool.
+- The payload file must exist before calling this tool. The 'payload' value is handed to the CLI exactly as written, so it must carry the '.json' extension: the CLI looks for '<cwd>/payload/<payload>' and then '<cwd>/<payload>' and never appends an extension of its own.
 - The payload must follow the dashboard schema: a 'widgets' array (NOT a CRUD payload with 'tableName'). The CLI's DashboardValidator rejects payloads that mix shapes, declare forbidden frontend fields (widgetType, layout, title, subtitle, color), have widgets without 'id', have duplicate widget ids, declare both 'query' AND 'queries' in the same widget, declare neither, or use placeholders not declared in 'params'.
 - The dashboard name MUST start with 'dash-' prefix (e.g. dash-sales, dash-inbound). The prefix is required by the CLI and becomes part of the URL segment.
 
@@ -66,7 +89,8 @@ PRESENTATION GUIDANCE:
 - Match the user's language. If the user writes in Indonesian, respond in Indonesian.
 - Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "the dashboard generator", "validate the payload first", "draft the payload first").
 - Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- This tool is destructive: it can overwrite an existing dashboard module file. BEFORE invoking this tool, ALWAYS confirm with the user in plain language. Example: "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, akan ditimpa (versi sebelumnya disimpan sebagai .archive.NNN). Lanjut?". Do not detect conflicts programmatically; the CLI handles that and creates the archive.
+- This tool is destructive on its default path: it can overwrite an existing dashboard module file. BEFORE invoking this tool, ALWAYS confirm with the user in plain language. Example: "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, akan ditimpa (versi sebelumnya disimpan sebagai .archive.NNN). Lanjut?". Do not detect conflicts programmatically; the CLI handles that and creates the archive.
+- When the user only wants to know whether the dashboard already exists, or explicitly refuses an overwrite, call with force=false: the CLI then stops with a clean error instead of writing, and this tool surfaces that error.
 - After the tool runs, summarise the result. Surface the resulting endpoint URL (POST /api/<project>/<name>/dashboard) so the user knows where to call it. Read the CLI output and identify any archive activity using the '.archive.NNN' filesystem convention; surface to the user when archives exist.
 - If the user is confused about the difference between a dashboard and a CRUD endpoint: dashboards aggregate data from multiple SQL queries (widgets) and return a JSON envelope with widget keys; CRUD endpoints expose actions like /datatables, /read, /create, /update, /delete on a single table. Suggest the right tool based on what the user is actually building.
 - When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
@@ -90,9 +114,13 @@ PRESENTATION GUIDANCE:
         payload: z
           .string()
           .min(1)
-          .max(50)
-          .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
-          .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`).'),
+          .max(200)
+          .regex(
+            /^[a-zA-Z0-9][a-zA-Z0-9._\\/-]*$/,
+            'must start with a letter or number; letters, numbers, dot, dash, underscore and path separators are allowed'
+          )
+          .refine((v) => !v.split(/[\\/]/).includes('..'), { message: "must not contain a '..' path segment" })
+          .describe("Payload file name or relative path, WITH the .json extension (e.g. 'dashboard-sales.json' or 'payload/dashboard-sales.json'). The value is passed to the CLI exactly as written — nothing is stripped or appended — and the CLI resolves it against '<cwd>/payload/' first, then '<cwd>'. The CLI does not add '.json' itself, so an extensionless name such as 'dashboard-sales' fails with 'Payload file not found'. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`)."),
         database: z
           .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
@@ -101,6 +129,10 @@ PRESENTATION GUIDANCE:
           .boolean()
           .optional()
           .describe('Default false (CLI default). When true, skip SQL keyword validation in payload widget queries. Useful when the SQL fragments are intentional but the validator flags them as suspicious.'),
+        force: z
+          .boolean()
+          .default(true)
+          .describe("Default true — the existing behaviour: overwrite an existing dashboard module (the CLI archives the previous version as .archive.NNN first) and re-register the project under the 'database' value of this call. Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but an existing dashboard module or a different registered database type makes the CLI stop with a clean error and write nothing. The dashboard command has no interactive prompt, so force=false never hangs the call."),
       },
       annotations: {
         title: 'Create Dashboard Module',
@@ -109,7 +141,7 @@ PRESENTATION GUIDANCE:
         idempotentHint: false,  // re-running creates new archive files
       },
     },
-    async ({ cwd, project, name, payload, database, skipSqlValidation }) => {
+    async ({ cwd, project, name, payload, database, skipSqlValidation, force }) => {
       const projectCwd = resolve(cwd);
       const dbType = database ?? 'postgres';
 
@@ -141,8 +173,17 @@ For the assistant:
       }
 
       // Pre-flight 2: payload file must exist. Treated as a non-error precondition per §3.4.
-      const payloadPath = join(projectCwd, 'payload', `${payload}.json`);
-      if (!(await pathExists(payloadPath))) {
+      // The argument is checked as written, using the same candidate list as the CLI, so the
+      // pre-flight can never accept something the CLI would then reject (or the reverse).
+      const payloadPath = await resolvePayloadPath(projectCwd, payload);
+      if (payloadPath === null) {
+        // Frequent caller mistake: an extensionless name. The CLI does not append '.json',
+        // and this tool no longer appends it either, so say so explicitly instead of
+        // silently rewriting the argument.
+        const extensionHint =
+          !payload.toLowerCase().endsWith('.json') && (await resolvePayloadPath(projectCwd, `${payload}.json`)) !== null
+            ? `\nNOTE: '${payload}.json' does exist. The payload argument is passed to the CLI verbatim and the CLI never appends an extension, so retry with payload='${payload}.json'.`
+            : '';
         return {
           content: [
             {
@@ -150,24 +191,30 @@ For the assistant:
               text: `Precondition not met: payload file not found.
 
 Project path: ${projectCwd}
-Expected payload file: ${payloadPath}
+Payload argument: ${payload}
+Locations checked: ${join(projectCwd, 'payload', payload)} and ${join(projectCwd, payload)}
 Requested project: ${project}
 Requested dashboard: ${name}
-Requested database: ${dbType}
+Requested database: ${dbType}${extensionHint}
 
 For the assistant:
 - The dashboard generator needs the payload file to exist before it can run.
+- The payload argument must include the '.json' extension; it is forwarded to the CLI unchanged.
 - Suggest creating or locating the payload first. Dashboard payloads have a different schema than CRUD payloads (a \`widgets\` array instead of \`tableName\`); see the dashboard documentation if the user is unfamiliar with the format.
-- When explaining to the user, say something like "the payload file '${payload}.json' isn't in the payload/ folder yet — should I help you draft it, or do you have one to put there?". Do not mention internal tool names.`,
+- When explaining to the user, say something like "the payload file '${payload}' isn't in the payload/ folder yet — should I help you draft it, or do you have one to put there?". Do not mention internal tool names.`,
             },
           ],
           isError: false, // per §3.4
         };
       }
 
-      // Build CLI invocation. --force=true is hardcoded: it bypasses the interactive readline
-      // prompt that would otherwise deadlock the subprocess. Conflict detection and archive
-      // creation are delegated to the CLI (single source of truth — see refactor 8C).
+      // Build CLI invocation. The payload argument is forwarded byte-for-byte: the CLI's
+      // findPayloadFile does an exact-name lookup and never appends '.json', so any
+      // normalisation here would break resolution (issue-45 butir 2).
+      // force defaults to true, which reproduces the previous hardcoded '--force=true'.
+      // With force=false the flag is omitted (the CLI's own default is false), so the CLI
+      // performs its own conflict checks and fails cleanly — the dashboard path has no
+      // interactive prompt, so no stdin handling is needed here.
       const cliArgs = [
         'restforge',
         'dashboard',
@@ -176,8 +223,8 @@ For the assistant:
         `--name=${name}`,
         `--payload=${payload}`,
         `--database=${dbType}`,
-        '--force=true',
       ];
+      if (force) cliArgs.push('--force=true');
       if (skipSqlValidation !== undefined) cliArgs.push(`--skip-sql-validation=${skipSqlValidation}`);
 
       const result = await execProcess(
@@ -202,8 +249,10 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Dashboard: ${name}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Database: ${dbType}
+Overwrite mode: ${force ? 'force (existing module overwritten, previous version archived)' : 'non-overwrite (force=false)'}
 Command: ${result.command}
 Exit code: ${result.exitCode}
 
@@ -225,6 +274,10 @@ For the assistant:
   * Widget SQL uses an undeclared placeholder (e.g. ':year' but 'year' missing from 'params') — suggest declaring the missing param or removing the placeholder.
   * Database mismatch with the existing project registry entry — the CLI refuses to switch the database. Suggest sticking with the originally registered database.
   * Reserved project name rejected by the validator — suggest a different project name.
+  * 'Payload file not found' — the CLI resolves the payload argument verbatim; check that the name includes the '.json' extension and that the file sits in the payload/ folder.
+${force
+  ? "- The call ran with the default force=true, so an overwrite was allowed; a conflict message is therefore not the cause here."
+  : "- The call ran with force=false. Two failures are expected on that path and mean nothing was written: 'Dashboard module already exists ... Pass options.force=true to overwrite' and \"Cannot change to '<db>' without --force\". In either case tell the user that the existing files are untouched, and offer the two real options: pick a different dashboard name, or regenerate deliberately with overwrite enabled (the previous version is archived as '.archive.NNN')."}
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.
 - Offer to retry once the underlying issue is resolved.`,
             },
@@ -243,8 +296,10 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Dashboard: ${name}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Database: ${dbType}
+Overwrite mode: ${force ? 'force (existing module overwritten, previous version archived)' : 'non-overwrite (no conflicting module was present)'}
 Endpoint: POST /api/${project}/${name}/dashboard
 
 Generated artefacts (commonly produced by the CLI):

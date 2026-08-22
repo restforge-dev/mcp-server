@@ -11,6 +11,8 @@ export function registerCodegenValidatePayload(server: McpServer): void {
       title: 'Validate Payload',
       description: `Validate that existing payload spec files in a project are still in sync with the current database schema, by running restforge payload --validate.
 
+Scope: this tool covers CRUD payloads only — the per-table specs with 'tableName' and 'fieldName' that it matches against real database columns. Dashboard payloads (the ones with a 'widgets' array and no table) are a different shape and are not checked here; validate those with 'codegen_validate_dashboard_payload', which runs the dashboard validator without writing any file.
+
 USE WHEN:
 - The user asks to validate, check, or verify whether existing payload files are still in sync with the current database schema
 - The user asks things like "cek drift payload", "validate semua payload", "apakah payload masih sinkron", "is the schema in sync", "check schema drift"
@@ -25,6 +27,7 @@ DO NOT USE FOR:
 - Generating a payload from scratch for a table that has no payload yet -> use 'codegen_generate_payload'
 - Updating payload files to match the database -> use 'codegen_sync_payload'
 - Checking the database connection, license, or other config credentials -> use 'setup_validate_config'
+- Validating a dashboard payload (a 'widgets' array instead of 'tableName') -> use 'codegen_validate_dashboard_payload'
 
 This tool runs: npx restforge payload validate --config=<config> [--table=<table>] in the given cwd.
 The CLI reads existing payload JSON files from the project payload/ directory, connects to the database described

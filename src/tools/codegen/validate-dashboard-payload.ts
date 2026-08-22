@@ -13,6 +13,22 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+/**
+ * Mirror of the CLI's own payload lookup for the dashboard command
+ * (PayloadValidator.findPayloadFile): the value is used verbatim, first under
+ * '<cwd>/payload/', then under '<cwd>'. No extension is appended anywhere —
+ * that is exactly why the pre-flight must not normalise the argument either.
+ * Deliberately local to the dashboard tools: create-endpoint and the other
+ * codegen tools keep their own extensionless convention, so a shared helper
+ * would change their behaviour too.
+ */
+async function resolvePayloadPath(projectCwd: string, payload: string): Promise<string | null> {
+  for (const candidate of [join(projectCwd, 'payload', payload), join(projectCwd, payload)]) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function registerCodegenValidateDashboardPayload(server: McpServer): void {
   server.registerTool(
     'codegen_validate_dashboard_payload',
@@ -26,7 +42,9 @@ This tool is READ-ONLY: it does NOT write any file, does NOT touch the database,
 
 Workflow positioning: this is the natural pre-flight before 'codegen_create_dashboard'. When the AI authors a dashboard payload (manually via Write), call this tool first to surface validation errors cheaply — before invoking the generator that performs filesystem writes.
 
-Gap closed: the general 'codegen_validate_payload' tool silently skips dashboard payloads (it filters on 'tableName' and 'fieldName'). This tool fills that gap for the dashboard shape.
+Gap closed: the general 'codegen_validate_payload' tool works on CRUD payloads per table and does not understand the dashboard shape. This tool fills that gap.
+
+Platform version requirement: this tool needs a @restforgejs/platform that provides 'dashboard create --validate-only'. That flag exists in the platform source AFTER release 5.5.5; the exact release number carrying it is whatever the next published version turns out to be. On an older platform the CLI answers "Unknown flag: --validate-only" and nothing is validated — this tool detects that answer and reports it as an upgrade requirement rather than as a payload problem. In that situation the payload can still be checked by running the generator itself ('codegen_create_dashboard'), which runs the very same validator before it writes anything.
 
 USE WHEN:
 - The user asks to validate, check, or verify the structure of a dashboard payload before generating
@@ -49,8 +67,8 @@ DO NOT USE FOR:
 Cross-reference: this tool is the read-only sibling of 'codegen_create_dashboard'. Both have nearly identical input schemas, but this tool only validates and does NOT generate any file.
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist at <cwd>/payload/<payload>.json before calling this tool.
+- The project must have @restforgejs/platform installed in node_modules, in a version that provides 'dashboard create --validate-only' (see the version requirement above).
+- The payload file must exist before calling this tool. The 'payload' value is handed to the CLI exactly as written, so it must carry the '.json' extension: the CLI looks for '<cwd>/payload/<payload>' and then '<cwd>/<payload>' and never appends an extension of its own.
 - The dashboard name MUST start with 'dash-' prefix (CLI requirement). For validate-only mode, this is checked at the argument-parser level even though the value is not used to write any file.
 
 PRESENTATION GUIDANCE:
@@ -80,9 +98,13 @@ PRESENTATION GUIDANCE:
         payload: z
           .string()
           .min(1)
-          .max(50)
-          .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
-          .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`).'),
+          .max(200)
+          .regex(
+            /^[a-zA-Z0-9][a-zA-Z0-9._\\/-]*$/,
+            'must start with a letter or number; letters, numbers, dot, dash, underscore and path separators are allowed'
+          )
+          .refine((v) => !v.split(/[\\/]/).includes('..'), { message: "must not contain a '..' path segment" })
+          .describe("Payload file name or relative path, WITH the .json extension (e.g. 'dashboard-sales.json' or 'payload/dashboard-sales.json'). The value is passed to the CLI exactly as written — nothing is stripped or appended — and the CLI resolves it against '<cwd>/payload/' first, then '<cwd>'. The CLI does not add '.json' itself, so an extensionless name such as 'dashboard-sales' fails with 'Payload file not found'. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`)."),
         database: z
           .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
@@ -129,8 +151,17 @@ For the assistant:
       }
 
       // Pre-flight 2: payload file must exist. Treated as a non-error precondition per §3.4.
-      const payloadPath = join(projectCwd, 'payload', `${payload}.json`);
-      if (!(await pathExists(payloadPath))) {
+      // The argument is checked as written, using the same candidate list as the CLI, so the
+      // pre-flight can never accept something the CLI would then reject (or the reverse).
+      const payloadPath = await resolvePayloadPath(projectCwd, payload);
+      if (payloadPath === null) {
+        // Frequent caller mistake: an extensionless name. The CLI does not append '.json',
+        // and this tool no longer appends it either, so say so explicitly instead of
+        // silently rewriting the argument.
+        const extensionHint =
+          !payload.toLowerCase().endsWith('.json') && (await resolvePayloadPath(projectCwd, `${payload}.json`)) !== null
+            ? `\nNOTE: '${payload}.json' does exist. The payload argument is passed to the CLI verbatim and the CLI never appends an extension, so retry with payload='${payload}.json'.`
+            : '';
         return {
           content: [
             {
@@ -138,22 +169,26 @@ For the assistant:
               text: `Precondition not met: payload file not found.
 
 Project path: ${projectCwd}
-Expected payload file: ${payloadPath}
+Payload argument: ${payload}
+Locations checked: ${join(projectCwd, 'payload', payload)} and ${join(projectCwd, payload)}
 Requested project: ${project}
-Requested dashboard: ${name}
-Requested payload: ${payload}
+Requested dashboard: ${name}${extensionHint}
 
 For the assistant:
 - The dashboard payload validator needs the payload file to exist before it can run.
+- The payload argument must include the '.json' extension; it is forwarded to the CLI unchanged.
 - Suggest creating or locating the payload first. Dashboard payloads have a different schema than CRUD payloads (a \`widgets\` array instead of \`tableName\`); see the dashboard documentation if the user is unfamiliar with the format.
-- When explaining to the user, say something like "the payload file '${payload}.json' isn't in the payload/ folder yet — should I help you draft it, or do you have one to put there?". Do not mention internal tool names.`,
+- When explaining to the user, say something like "the payload file '${payload}' isn't in the payload/ folder yet — should I help you draft it, or do you have one to put there?". Do not mention internal tool names.`,
             },
           ],
           isError: false, // per §3.4
         };
       }
 
-      // Build CLI invocation. --validate-only=true is hardcoded: this tool is ONLY for validation.
+      // Build CLI invocation. The payload argument is forwarded byte-for-byte: the CLI's
+      // findPayloadFile does an exact-name lookup and never appends '.json', so any
+      // normalisation here would break resolution (issue-45 butir 2).
+      // --validate-only=true is hardcoded: this tool is ONLY for validation.
       // --force is NOT passed (not relevant for validate-only — no overwrite scenario).
       // Validation logic itself is delegated to the CLI's DashboardValidator (single source of
       // truth — see refactor 8C).
@@ -180,7 +215,48 @@ For the assistant:
         }
       );
 
-      // Branch C: CLI failure (validation failed or other) — real error per §3.4; structured per §3.5.
+      // Branch C1: the installed platform predates the '--validate-only' flag. The CLI rejects
+      // the flag at argument-parser level (exit 2, message on stderr), so nothing was validated
+      // at all. Reported separately: it is an environment problem, not a payload problem.
+      const unknownFlag = `${result.stdout}\n${result.stderr}`.includes('Unknown flag: --validate-only');
+      if (!result.success && unknownFlag) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Dashboard payload was NOT validated: the installed RESTForge version does not support validate-only mode.
+
+Project path: ${projectCwd}
+Project: ${project}
+Dashboard: ${name}
+Payload: ${payload}
+Payload file: ${payloadPath}
+Command: ${result.command}
+Exit code: ${result.exitCode}
+Reason: the CLI rejected the flag with "Unknown flag: --validate-only"
+
+--- CLI output ---
+stdout:
+${result.stdout}
+
+stderr:
+${result.stderr}
+--- end CLI output ---
+
+For the assistant:
+- IMPORTANT: this is NOT a payload error. The payload was never inspected; the command was rejected before validation started.
+- Cause: 'dashboard create --validate-only' exists in @restforgejs/platform only from the release published after 5.5.5 onwards. The copy installed in this project is older.
+- Two ways forward, offer them in plain language:
+  1. Upgrade the RESTForge package in this project to a version that provides validate-only mode, then retry.
+  2. Without upgrading, validate by generating the dashboard module instead — the generator runs the very same validator and reports the same errors, but it does write files, so confirm with the user before doing that.
+- Do not mention internal tool names or flag names to the user; describe the actions ("upgrade the RESTForge package", "generate the dashboard module"). Match the user's language.`,
+            },
+          ],
+          isError: true, // per §3.4 — the requested work did not happen
+        };
+      }
+
+      // Branch C2: CLI failure (validation failed or other) — real error per §3.4; structured per §3.5.
       if (!result.success) {
         return {
           content: [
@@ -191,7 +267,8 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Dashboard: ${name}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Command: ${result.command}
 Exit code: ${result.exitCode}
 
@@ -213,6 +290,7 @@ For the assistant:
   * 'forbidden frontend field' (widgetType, layout, title, subtitle, color) — those belong in the frontend code; remove them from the payload.
   * 'invalid type' for params — the param type must be one of: string, number, boolean, date.
   * 'duplicate widget id' — two widgets share the same id; pick distinct ids.
+  * 'Payload file not found' — the CLI resolves the payload argument verbatim; check that the name includes the '.json' extension and that the file sits in the payload/ folder.
 - Offer to help fix the payload and retry validation.
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.`,
             },
@@ -231,7 +309,8 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Dashboard: ${name}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 
 --- CLI output ---
 ${result.stdout}
