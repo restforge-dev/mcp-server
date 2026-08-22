@@ -28,11 +28,14 @@ The 'force' parameter controls the overwrite gate and defaults to TRUE, which me
 - force=false also makes the CLI refuse to register a project under a different database type than the one already recorded in the registry, instead of silently switching it.
 Use force=false when the user wants to know whether a module already exists before committing to a regeneration; use the default force=true for a deliberate regeneration.
 
+Database type is resolved by the CLI, not by this tool. Order of priority: (1) the 'database' parameter when it is set — it is passed through as '--database=<value>' and always wins; (2) auto-detection of DB_TYPE from the active config (the file named by 'config', otherwise the recorded default config) when 'database' is not set — no '--database' flag is sent at all in that case; (3) fallback 'postgres' inside the CLI when neither applies. Practical consequence: do NOT set 'database' just to be explicit. Leaving it unset lets a MySQL, Oracle, or SQLite project be generated for its own database type; setting it to a guessed value overrides the project's config silently.
+
 Safety net: when the CLI overwrites an existing module, model, or query directory, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
 
 AI responsibility — IMPORTANT: because this tool executes immediately and, with the default force=true, may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
-- "Saya akan generate endpoint <endpoint> di project <project> ({database}). Kalau modul/model lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
-- "I will generate <endpoint> under project <project> using <database>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
+- "Saya akan generate endpoint <endpoint> di project <project>. Kalau modul/model lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
+- "I will generate <endpoint> under project <project>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
+- Mention a database type in that confirmation only when the user named one (i.e. when the 'database' parameter is set). When it is left unset, do not guess a type — the CLI takes it from the project's own config.
 
 USE WHEN:
 - The user asks to generate, create, or scaffold an endpoint, resource, or module from a payload (e.g. "buatkan endpoint untuk product", "generate resource users", "create endpoint dari payload X", "scaffold a new endpoint")
@@ -93,9 +96,9 @@ PRESENTATION GUIDANCE:
           .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
           .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Same shape rules as project.'),
         database: z
-          .enum(['postgres', 'oracle', 'mysql'])
+          .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
-          .describe('Database type for the generated code. Default postgres.'),
+          .describe("Database type for the generated code. LEAVE IT UNSET unless the user explicitly names a database: when unset, no --database flag is sent and the CLI resolves the type itself, in this order — (1) explicit value (this parameter), (2) auto-detection of DB_TYPE from the active config (the one given via 'config', or the recorded default config), (3) fallback 'postgres' when no config can be resolved. Setting this parameter always wins over the project's own config, so an unnecessary value can generate postgres code for a MySQL/Oracle/SQLite project."),
         createDemo: z
           .boolean()
           .optional()
@@ -148,7 +151,14 @@ PRESENTATION GUIDANCE:
       config,
     }) => {
       const projectCwd = resolve(cwd);
-      const dbType = database ?? 'postgres';
+      // Database-type resolution belongs to the CLI (generators/cli/endpoint/create.js,
+      // "Resolusi tipe database"): an explicit --database wins, otherwise DB_TYPE is
+      // auto-detected from the active config, otherwise it falls back to 'postgres'.
+      // The flag is therefore sent only when the caller actually set the parameter;
+      // sending it unconditionally would make priority 1 always win and permanently
+      // disable the auto-detection step. This label is for reporting only.
+      const dbTypeLabel =
+        database ?? 'not specified (resolved by the CLI: DB_TYPE of the active config, else postgres)';
 
       // Pre-flight 1: @restforgejs/platform must be installed. Treated as a non-error precondition per §3.4.
       try {
@@ -165,7 +175,7 @@ Expected location: node_modules/@restforgejs/platform
 Requested project: ${project}
 Requested endpoint: ${endpoint}
 Requested payload: ${payload}
-Requested database: ${dbType}
+Requested database: ${dbTypeLabel}
 
 For the assistant:
 - The endpoint generator can only run once the RESTForge package is installed locally.
@@ -190,7 +200,7 @@ Project path: ${projectCwd}
 Expected payload file: ${payloadPath}
 Requested project: ${project}
 Requested endpoint: ${endpoint}
-Requested database: ${dbType}
+Requested database: ${dbTypeLabel}
 
 For the assistant:
 - The endpoint generator needs the payload file to exist before it can run.
@@ -214,8 +224,10 @@ For the assistant:
         `--project=${project}`,
         `--name=${endpoint}`,
         `--payload=${payload}`,
-        `--database=${dbType}`,
       ];
+      // Sent only when explicitly requested, so the CLI's own resolution order stays
+      // intact when it is not (see the dbTypeLabel comment above).
+      if (database !== undefined) cliArgs.push(`--database=${database}`);
       if (force) cliArgs.push('--force=true');
       // The CLI names this flag '--create-examples'; the MCP parameter keeps the older
       // name 'createDemo' for client compatibility.
@@ -262,7 +274,7 @@ Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
 Payload: payload/${payload}.json
-Database: ${dbType}
+Database: ${dbTypeLabel}
 Command: ${result.command}
 
 --- CLI output ---
@@ -292,7 +304,7 @@ Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
 Payload: payload/${payload}.json
-Database: ${dbType}
+Database: ${dbTypeLabel}
 Command: ${result.command}
 Exit code: ${result.exitCode}
 
@@ -330,7 +342,7 @@ Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
 Payload: payload/${payload}.json
-Database: ${dbType}
+Database: ${dbTypeLabel}
 Overwrite mode: ${force ? 'force (existing files overwritten, previous versions archived)' : 'non-overwrite (no conflicting module was present)'}
 
 Generated artefacts (commonly produced by the CLI):
@@ -347,7 +359,7 @@ ${result.stdout}
 --- end CLI output ---
 
 For the assistant:
-- Confirm to the user in plain language that the project and endpoint were generated. Mention the project, endpoint, and database used.
+- Confirm to the user in plain language that the project and endpoint were generated. Mention the project and the endpoint. Mention the database type only when it is known: either it was passed explicitly, or the CLI reported the resolved type in its output (it prints a 'Database: <type>' line, annotated with '(auto-detected ...)' when it came from a config, in verbose runs). When the fact block above says the database was not specified, do not invent a type.
 - Do not paste the entire CLI output unless the user explicitly asks; summarise instead.
 - Suggest natural follow-up actions appropriate to context: review the generated files, run the project to test the new endpoint, generate a processor or test, etc. Do not mention internal tool names.
 - Read the CLI output to identify any archive activity. The CLI uses the '.archive.NNN' naming convention in the filesystem; it also reports archive activity in its output, though the exact phrasing may evolve. When archives are created, tell the user that the previous version of each overwritten file is preserved as an archive file in the same folder, and explain where to find them if rollback is needed.
