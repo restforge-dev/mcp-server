@@ -26,7 +26,7 @@ DO NOT USE FOR:
 - Writing config -> use 'setup_write_env' or 'setup_update_env'
 - Getting raw template text -> use 'setup_get_init_template'
 
-This tool runs: npx restforge config:schema in the given cwd.
+This tool runs: npx restforge config schema in the given cwd.
 The schema is sourced from restforge (single source of truth) so it stays
 in sync with the restforge runtime version installed in the project.
 Requires @restforgejs/platform >= 2.3.1.

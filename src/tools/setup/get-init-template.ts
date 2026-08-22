@@ -26,7 +26,7 @@ DO NOT USE FOR:
 - Reading current config -> use 'setup_read_env'
 - Getting structured schema (JSON) -> use 'setup_get_config_schema'
 
-This tool runs: npx restforge config:template in the given cwd.
+This tool runs: npx restforge config template in the given cwd.
 This tool is READ-ONLY and safe to call repeatedly. No file is written.
 Requires @restforgejs/platform >= 2.3.1.
 

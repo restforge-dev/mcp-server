@@ -13,7 +13,7 @@ export function registerCodegenValidateSql(server: McpServer): void {
     'codegen_validate_sql',
     {
       title: 'Validate SQL Query',
-      description: `Validate a SELECT (or WITH/CTE) SQL statement against the live database — checks syntax, column references, function existence, type compatibility, and JOIN resolution — by wrapping restforge query:validate. Live introspection — the CLI runs EXPLAIN against the configured database without executing any rows.
+      description: `Validate a SELECT (or WITH/CTE) SQL statement against the live database — checks syntax, column references, function existence, type compatibility, and JOIN resolution — by wrapping restforge query validate. Live introspection — the CLI runs EXPLAIN against the configured database without executing any rows.
 
 USE WHEN:
 - The user asks "is this SQL valid?", "check my SQL", "validate this query", "cek SQL ini bener atau salah"
@@ -33,11 +33,11 @@ DO NOT USE FOR:
 
 Cross-reference: this tool complements 'codegen_list_tables' and 'codegen_describe_table'. Use list/describe to ground SQL on the live schema, then validate-sql to confirm the composed SQL is correct before commit.
 
-This tool runs: npx restforge query:validate --config=<config> --sql=<sql> --pretty=false in the given cwd.
+This tool runs: npx restforge query validate --config=<config> --sql=<sql> --pretty=false in the given cwd.
 The CLI runs EXPLAIN (PostgreSQL/MySQL) or EXPLAIN PLAN FOR (Oracle) against the configured database, without executing any rows.
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules (>= 2.4.8 for query:validate support).
+- The project must have @restforgejs/platform installed in node_modules, in a version that provides the 'query validate' sub-command (confirmed present in 5.5.5; the exact minimum version is not established).
 - The config file (default 'db-connection.env') must exist in the project (or in cwd/config/) and contain valid database credentials. The CLI auto-fallbacks to the config/ subfolder if the file is not found at the top level.
 
 PRESENTATION GUIDANCE:
@@ -102,7 +102,8 @@ For the assistant:
       // Run CLI with --pretty=false (compact); the MCP layer re-formats JSON for output.
       const cliArgs = [
         'restforge',
-        'query:validate',
+        'query',
+        'validate',
         `--config=${config}`,
         `--sql=${sql}`,
         '--pretty=false',
@@ -171,7 +172,7 @@ For the assistant:
 - Summarise the most likely cause from the CLI output in plain language. Common causes:
   * Config file not found — suggest verifying the path and that the file exists in the project (or in cwd/config/).
   * Database connection failed — suggest verifying the credentials, that the host is reachable, and that the port is open.
-  * Unknown command 'query:validate' — the installed RESTForge version may be older than this CLI subcommand; suggest upgrading the package (requires @restforgejs/platform >= 2.4.8).
+  * "Unknown command: query" — the installed RESTForge version does not provide the 'query validate' sub-command; suggest upgrading @restforgejs/platform to a version that supports it (confirmed present in 5.5.5).
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.
 - Offer to retry once the underlying issue is resolved.`,
             },
@@ -203,7 +204,7 @@ ${result.stdout}
 For the assistant:
 - The CLI returned output that is not valid JSON.
 - Summarise this to the user in plain language; do not paste the raw stdout unless they explicitly ask.
-- Suggest checking that the installed RESTForge package version is compatible (requires @restforgejs/platform >= 2.4.8). Do not mention internal tool names.`,
+- Suggest checking that the installed @restforgejs/platform version is compatible with the 'query validate' sub-command (confirmed present in 5.5.5). Do not mention internal tool names.`,
             },
           ],
           isError: true,

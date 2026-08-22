@@ -29,7 +29,7 @@ DO NOT USE FOR:
 - Applying changes to payload files -> use 'codegen_sync_payload'
 - Generating SQL DDL constraints (NOT NULL, UNIQUE, CHECK, REFERENCES, ALTER TABLE, CREATE INDEX) — these are database-level and out of scope for RESTForge field validation. They require direct SQL or a database migration tool.
 
-This tool runs: npx restforge field-validation:catalog in the given cwd.
+This tool runs: npx restforge catalog field-validation in the given cwd.
 The catalog is sourced from restforge (single source of truth) so it stays in sync with
 the restforge runtime version installed in the project.
 Requires @restforgejs/platform >= 2.4.0.

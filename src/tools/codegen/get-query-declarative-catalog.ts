@@ -32,7 +32,7 @@ DO NOT USE FOR:
 - Master-detail full structure outside \`detailQuery\` (e.g. \`enabled\`, \`detailTable\`, \`foreignKey\`, \`detailConfig.tableName\`) — not in catalog scope; refer to documentationUrl
 - Use case examples and decision guides ("kapan pakai X vs Y") — refer to documentationUrl for narrative explanation
 
-This tool runs: npx restforge query-declarative:catalog in the given cwd.
+This tool runs: npx restforge catalog query-declarative in the given cwd.
 The catalog is sourced from restforge (single source of truth) so it stays in sync with
 the restforge runtime version installed in the project.
 

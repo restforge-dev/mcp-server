@@ -36,7 +36,7 @@ DO NOT USE FOR:
 - Multi-database SQL dialect adaptation inside widget queries — not in catalog scope; refer to documentationUrl
 - Performance characteristics (Promise.allSettled execution, in-memory SQL embedding) — not in catalog scope; refer to documentationUrl
 
-This tool runs: npx restforge dashboard:catalog in the given cwd.
+This tool runs: npx restforge catalog dashboard in the given cwd.
 The catalog is sourced from restforge (single source of truth) so it stays in sync with
 the restforge runtime version installed in the project.
 
