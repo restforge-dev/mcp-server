@@ -84,9 +84,9 @@ PRESENTATION GUIDANCE:
           .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
           .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`).'),
         database: z
-          .enum(['postgres', 'oracle', 'mysql'])
+          .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
-          .describe('Database type. Default postgres. Database connection is NOT used in validate-only mode (validation is structural, not drift-based), but kept for argument-schema parity with codegen_create_dashboard.'),
+          .describe("Database type. Accepted values match the CLI's own list for this command: postgres, oracle, mysql, sqlite. Optional, and when it is left unset this tool sends '--database=postgres' explicitly, which is also the CLI's own default. The database connection is NOT used in validate-only mode (validation is structural, not drift-based) and the dialect does not change the validation outcome; the parameter is kept for argument-schema parity with codegen_create_dashboard."),
         skipSqlValidation: z
           .boolean()
           .optional()

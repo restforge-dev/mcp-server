@@ -26,6 +26,8 @@ This tool is DESTRUCTIVE: it spawns the CLI which writes / overwrites files in '
 
 Safety net: when the CLI overwrites an existing dashboard module, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
 
+Database type: the 'dashboard create' CLI handler resolves the dialect with a plain default only — the value of '--database' when given, otherwise postgres. It does NOT read DB_TYPE from the active config, so there is no auto-detection to fall back on here (this differs from 'codegen_create_endpoint', which does auto-detect). Ask for or infer the project's actual database and pass it whenever the project is not postgres; the dialect is baked into the SQL of the generated module.
+
 AI responsibility — IMPORTANT: because this tool always executes and may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
 - "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
 - "I will generate <name> under project <project>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
@@ -92,9 +94,9 @@ PRESENTATION GUIDANCE:
           .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
           .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Payload must follow the dashboard schema (with a `widgets` array; NOT a CRUD payload with `tableName`).'),
         database: z
-          .enum(['postgres', 'oracle', 'mysql'])
+          .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
-          .describe('Database type for the generated code. Default postgres.'),
+          .describe("Database type for the generated code. Accepted values match the CLI's own list for this command: postgres, oracle, mysql, sqlite. Optional, and when it is left unset this tool sends '--database=postgres' explicitly, which is also the CLI's own default for 'dashboard create'. NOTE — unlike 'codegen_create_endpoint', the dashboard CLI handler does NOT auto-detect DB_TYPE from the active config: it only applies a plain postgres default. So for any project that is not postgres, set this parameter explicitly, otherwise the generated dashboard module targets the wrong dialect."),
         skipSqlValidation: z
           .boolean()
           .optional()
