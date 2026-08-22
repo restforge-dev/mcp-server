@@ -110,6 +110,17 @@ user. Read-only inspection — 'runtime_check_status', reading the PID file,
 calling 'pm2 jlist' — is allowed because it does not mutate the server
 lifecycle.
 
+The same boundary covers the Kafka consumer runtime. "Run the consumer",
+"jalankan consumer", "deploy consumer ke pm2" route to
+'runtime_generate_consumer_launcher', never to a Bash-spawned
+'npx restforge-consumer'. That tool writes either a consumer-start/consumer-stop
+script pair (mode=host) or the PM2 deploy files under ./deploy/ (mode=pm2, by
+running the deploy generator, which only writes files); the user starts the
+consumer. Note that the consumer is a separate binary from the API server, so
+'runtime_generate_launcher' and 'runtime_check_status' do not cover it, and
+'--config' is mandatory for the consumer even though the server can search for
+its config.
+
 If the user explicitly insists on a one-off background run despite the
 warning ("I know it will die, just run it for now"), state plainly that the
 process will terminate when this session ends, then comply only as a last

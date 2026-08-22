@@ -4,6 +4,7 @@ import { registerRuntimeDetectConfig } from './detect-config.js';
 import { registerRuntimeValidatePreflight } from './validate-preflight.js';
 import { registerRuntimeCheckLauncherExists } from './check-launcher-exists.js';
 import { registerRuntimeGenerateLauncher } from './generate-launcher.js';
+import { registerRuntimeGenerateConsumerLauncher } from './generate-consumer-launcher.js';
 import { registerRuntimeCheckStatus } from './check-status.js';
 
 export function registerRuntimeTools(server: McpServer): void {
@@ -12,5 +13,6 @@ export function registerRuntimeTools(server: McpServer): void {
   registerRuntimeValidatePreflight(server);
   registerRuntimeCheckLauncherExists(server);
   registerRuntimeGenerateLauncher(server);
+  registerRuntimeGenerateConsumerLauncher(server);
   registerRuntimeCheckStatus(server);
 }
