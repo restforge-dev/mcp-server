@@ -9,6 +9,7 @@ import { registerDesignerTools } from './tools/designer/index.js';
 import { registerDataTools } from './tools/data/index.js';
 import { registerKeyTools } from './tools/key/index.js';
 import { registerProjectTools } from './tools/project/index.js';
+import { registerLicenseTools } from './tools/license/index.js';
 
 const SERVER_NAME = 'restforge-mcp';
 
@@ -379,6 +380,39 @@ build or generate a frontend UDF, route along this flow:
   ('designer_preview_files'), and finally generate ('designer_generate'),
   pointing those at the aggregator UDF file, not the page fragments.
 
+FRONTEND AUTH — CREATE VS ATTACH:
+Three designer tools manage frontend auth and they are not interchangeable; the
+CLI accepts exactly one of the three modes per invocation.
+- 'designer_auth_create' (--create) installs the standalone rfx_auth overlay
+  (login.html, signup.html, js/rfx_auth.js) and injects the guard into existing
+  pages. Reach for it when an app simply needs a login/signup UI.
+- 'designer_auth_attach' (--attach) retrofits the FULL auth scaffold onto a
+  project whose pages are ALREADY generated, without touching the page files:
+  always the window.Auth (rfx_auth) contract, plus the plugin login artifacts
+  when the project payload enables auth on 'vanilla-js-auth' or
+  'vanilla-js-custom'. Reach for it when 'designer_generate' warned that the
+  auth artifacts are missing, or when auth has to be switched on afterwards for
+  a running app.
+- 'designer_auth_remove' (--remove) uninstalls the overlay again.
+
+CLIENT SDK GENERATION:
+'project_sdk_generate' wraps 'restforge project sdk --generate'. It derives a
+JavaScript SDK (client.<resource>.<verb>(payload)) from the project's
+metadata/<project>.json and payload files, and includes client.auth when the
+backend auth extension is installed. It writes buildable SOURCE only — npm
+install, npm run build and npm run deploy stay with the user. Route requests
+like "generate SDK", "buatkan SDK untuk project", or "client JS untuk backend"
+here instead of hand-writing a fetch wrapper. Regenerating after the endpoint
+list or the auth status changed needs force=true, which overwrites the SDK
+folder in place with no backup — say so before using it.
+
+LICENSE DOMAIN:
+'license_info' is the only license tool: it reads the activation stored on this
+machine (key, e-mail, type, machine id, last check, expiry). The command emits
+plain CLI text and has no structured form, so the tool passes the text through
+as-is. Use it to diagnose a license failure reported by 'setup_validate_config'
+before suggesting a re-activation.
+
 INTERACTIVE COMMANDS — knowledge only, NOT wrapped as tools:
 Some restforge commands are interactive and are intentionally NOT exposed as
 tools. When the user asks about them, EXPLAIN what they do and give the exact
@@ -407,6 +441,19 @@ drive the interactive prompts.
     payload -> sync payload (expand FK) -> create endpoint, then (frontend)
     codegen_migrate_payload -> designer validate/preview/generate. Offer this as
     the automatable alternative to fast-track.
+
+MUTATIONS DELIBERATELY NOT WRAPPED:
+A few non-interactive commands are still intentionally left out of this server
+because their effect reaches beyond the current project folder. Explain what
+they do and hand the user the exact command to run in their own terminal; do
+NOT run them via the Bash tool on the user's behalf.
+
+- 'license deactivate' — command: npx restforge license deactivate
+  Purpose: releases this machine's activation seat on the license server. The
+  effect spans machines (the seat is freed centrally) and cannot be undone from
+  here, so it is exposed as knowledge only. Call 'license_info' first to show
+  what is currently activated, then let the user run the deactivation
+  themselves.
 `.trim();
 
 export async function startServer(): Promise<void> {
@@ -428,6 +475,7 @@ export async function startServer(): Promise<void> {
   registerDataTools(server);
   registerKeyTools(server);
   registerProjectTools(server);
+  registerLicenseTools(server);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

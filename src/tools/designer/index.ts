@@ -8,6 +8,7 @@ import { registerDesignerInitProject } from './init-project.js';
 import { registerDesignerGenerate } from './generate.js';
 import { registerDesignerGetUdfCatalog } from './get-udf-catalog.js';
 import { registerDesignerAuthCreate } from './auth-create.js';
+import { registerDesignerAuthAttach } from './auth-attach.js';
 import { registerDesignerAuthRemove } from './auth-remove.js';
 
 export function registerDesignerTools(server: McpServer): void {
@@ -20,5 +21,6 @@ export function registerDesignerTools(server: McpServer): void {
   registerDesignerGenerate(server);
   registerDesignerGetUdfCatalog(server);
   registerDesignerAuthCreate(server);
+  registerDesignerAuthAttach(server);
   registerDesignerAuthRemove(server);
 }

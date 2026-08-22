@@ -23,7 +23,8 @@ USE WHEN:
 DO NOT USE FOR:
 - Removing/uninstalling embedded auth -> use 'designer_auth_remove'
 - Backend auth installation -> use 'project_auth'
-- Projects that already use the vanilla-js-auth plugin (which has auth built in)
+- Retrofitting the auth scaffold onto a project whose pages are already generated, or a
+  project running the 'vanilla-js-auth'/'vanilla-js-custom' plugin -> use 'designer_auth_attach'
 - Generating or re-generating frontend pages -> use 'designer_generate'
 
 This tool wraps: npx restforge-designer auth --create --project=<project> [optional flags],
