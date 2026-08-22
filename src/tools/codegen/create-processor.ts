@@ -4,6 +4,42 @@ import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
 
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Meniru normalisasi nama payload milik CLI. `processor create` memakai
+ * ArgumentValidator.validatePayloadName yang sama dengan `endpoint create`:
+ * '.json' dibuang bila ada, sisanya di-lowercase, lalu '.json' ditambahkan
+ * kembali. Nama ber-path ditolak validator itu, jadi dideteksi terpisah.
+ */
+function cliPayloadFileName(payload: string): string {
+  const base = payload.endsWith('.json') ? payload.slice(0, -5) : payload;
+  return `${base.toLowerCase()}.json`;
+}
+
+/** Pola nama yang diterima validator CLI setelah ekstensi dibuang. */
+const CLI_PAYLOAD_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}$/;
+
+/**
+ * Meniru daftar kandidat readPayloadFile di generators/cli/processor/create.js.
+ * Subprocess berjalan dengan cwd = projectCwd, sehingga workingDir dan
+ * process.cwd() milik CLI keduanya menunjuk ke sana; kandidat relatif __dirname
+ * menunjuk ke dalam package platform dan sengaja tidak ditiru.
+ */
+async function resolvePayloadPath(projectCwd: string, fileName: string): Promise<string | null> {
+  for (const candidate of [join(projectCwd, 'payload', fileName), join(projectCwd, fileName)]) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function registerCodegenCreateProcessor(server: McpServer): void {
   server.registerTool(
     'codegen_create_processor',
@@ -30,7 +66,7 @@ Re-run behavior (important):
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The named processor payload JSON must exist. This tool does not pre-check it — if the CLI fails, the failure response surfaces the cause.
+- The named processor payload JSON must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json). This tool pre-checks it using the same resolution the CLI applies: the '.json' extension is optional in the parameter, the name is lowercased, and path forms are rejected.
 
 PRESENTATION GUIDANCE:
 - Match the user's language. If the user writes in Indonesian, respond in Indonesian.
@@ -48,7 +84,7 @@ PRESENTATION GUIDANCE:
         payload: z
           .string()
           .min(1)
-          .describe('Path or file name of the processor payload JSON. REQUIRED.'),
+          .describe("File name of the processor payload JSON, WITH or WITHOUT the '.json' extension — both forms are accepted and resolve to the same file, because the CLI strips the extension, lowercases the name, and appends '.json' again. NOT a path: 'payload/order.json' or an absolute path is rejected by the CLI validator. The file is looked up at <cwd>/payload/<name>.json, then <cwd>/<name>.json. Base name max 50 chars, letters/numbers/dash/underscore only, cannot start or end with dash or underscore. REQUIRED."),
         database: z
           .enum(['postgres', 'mysql', 'oracle', 'sqlite'])
           .optional()
@@ -95,6 +131,56 @@ For the assistant:
         };
       }
 
+      // Pre-flight payload: the CLI rejects path forms outright and resolves the
+      // remaining name to a lowercase '<name>.json'. Mirroring that here turns a late
+      // CLI failure into an actionable precondition, without ever changing the value
+      // that is sent — the argument below is still passed verbatim.
+      if (payload.includes('/') || payload.includes('\\') || !CLI_PAYLOAD_NAME.test(cliPayloadFileName(payload).slice(0, -5))) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Precondition not met: the payload name has a shape the CLI rejects.
+
+Project path: ${projectCwd}
+Payload argument: ${payload}
+Accepted shape: a bare file name, optionally ending in '.json' — letters, numbers, dash, underscore only, starting with a letter or number, max 50 characters before the extension.
+
+For the assistant:
+- The processor generator does not accept a path here, only a file name. It always looks inside the project's payload/ folder (falling back to the project root).
+- Retry with just the file name, e.g. 'order-processor.json' instead of 'payload/order-processor.json'.
+- When explaining to the user, say something like "the payload has to be given as a file name inside the payload/ folder, not as a path". Do not mention internal tool names.`,
+            },
+          ],
+          isError: false,
+        };
+      }
+
+      const payloadFileName = cliPayloadFileName(payload);
+      const payloadPath = await resolvePayloadPath(projectCwd, payloadFileName);
+      if (payloadPath === null) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Precondition not met: payload file not found.
+
+Project path: ${projectCwd}
+Payload argument: ${payload}
+Resolved file name: ${payloadFileName}
+Locations checked: ${join(projectCwd, 'payload', payloadFileName)} and ${join(projectCwd, payloadFileName)}
+Requested processor: ${name}
+
+For the assistant:
+- The processor generator needs the payload file to exist before it can run.
+- The CLI lowercases the payload name and appends '.json', so '${payload}' can only ever match the file '${payloadFileName}'. If a file with different capitalisation exists, rename it to match.
+- When explaining to the user, say something like "the payload file '${payloadFileName}' isn't in the payload/ folder yet — do you have one to put there?". Do not mention internal tool names.`,
+            },
+          ],
+          isError: false,
+        };
+      }
+
       const args = ['restforge', 'processor', 'create', `--project=${project}`, `--name=${name}`, `--payload=${payload}`];
       if (database) args.push(`--database=${database}`);
       if (force) args.push('--force');
@@ -113,6 +199,7 @@ Project path: ${projectCwd}
 Project: ${project}
 Processor: ${name}
 Payload: ${payload}
+Payload file: ${payloadPath}
 Command: ${result.command}
 Exit code: ${result.exitCode}
 
@@ -144,6 +231,7 @@ Project path: ${projectCwd}
 Project: ${project}
 Processor: ${name}
 Payload: ${payload}
+Payload file: ${payloadPath}
 Force: ${force ? 'yes (old implementation archived then overwritten)' : 'no (existing implementation preserved)'}
 Command: ${result.command}
 

@@ -13,6 +13,32 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+/**
+ * Meniru normalisasi nama payload milik CLI, yaitu
+ * generators/lib/validators/argument-validator.js `validatePayloadName`:
+ * ekstensi '.json' dibuang bila ada, sisanya di-lowercase, lalu '.json'
+ * ditambahkan kembali. Karena itu 'Users' dan 'users.json' menghasilkan file
+ * yang sama, dan nilai parameter tetap dikirim apa adanya ke CLI.
+ */
+function cliPayloadFileName(payload: string): string {
+  const base = payload.endsWith('.json') ? payload.slice(0, -5) : payload;
+  return `${base.toLowerCase()}.json`;
+}
+
+/**
+ * Meniru daftar kandidat CLI (`PayloadValidator.findPayloadFile`) untuk
+ * pemanggilan lewat MCP: subprocess dijalankan dengan cwd = projectCwd,
+ * sehingga workingDir dan process.cwd() milik CLI keduanya menunjuk ke sana.
+ * Kandidat `rootDir` relatif __dirname menunjuk ke dalam package platform dan
+ * sengaja tidak ditiru.
+ */
+async function resolvePayloadPath(projectCwd: string, fileName: string): Promise<string | null> {
+  for (const candidate of [join(projectCwd, 'payload', fileName), join(projectCwd, fileName)]) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export function registerCodegenCreateEndpoint(server: McpServer): void {
   server.registerTool(
     'codegen_create_endpoint',
@@ -62,7 +88,7 @@ DO NOT USE FOR:
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist at <cwd>/payload/<payload>.json before calling this tool.
+- The payload file must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json) before calling this tool. The 'payload' parameter takes the file name with or without the '.json' extension — the value is passed to the CLI verbatim, and the CLI resolves both forms to the same lowercase '<name>.json' file.
 - The CLI itself rejects reserved project names (src, lib, node_modules, config, utils, models, controllers, middleware, routes) and reserved endpoint names (health, status, admin, api, auth, login, logout, register, index, main, app, config, test, docs, swagger, graphql, websocket, socket). When in doubt, ask the user to pick a different name before invoking this tool.
 
 PRESENTATION GUIDANCE:
@@ -92,9 +118,12 @@ PRESENTATION GUIDANCE:
         payload: z
           .string()
           .min(1)
-          .max(50)
-          .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/, 'must start with a letter or number; only letters, numbers, dashes, underscores allowed')
-          .describe('Payload file name without the .json extension. The file must exist at <cwd>/payload/<payload>.json. Same shape rules as project.'),
+          .max(55)
+          .regex(
+            /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}(\.json)?$/,
+            'must start with a letter or number; only letters, numbers, dashes, underscores allowed, with an optional .json extension'
+          )
+          .describe("Payload file name, WITH or WITHOUT the '.json' extension — both forms are accepted and resolve to the same file, because the CLI strips the extension, lowercases the name, and appends '.json' again. The file must exist at <cwd>/payload/<name>.json or <cwd>/<name>.json. Path forms ('payload/users.json', absolute paths) are rejected by the CLI: pass the bare file name only. Base name max 50 chars, cannot start or end with dash or underscore. Note the lowercasing: a file literally named 'Users.json' is NOT found on a case-sensitive filesystem."),
         database: z
           .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
@@ -188,8 +217,12 @@ For the assistant:
       }
 
       // Pre-flight 2: payload file must exist. Treated as a non-error precondition per §3.4.
-      const payloadPath = join(projectCwd, 'payload', `${payload}.json`);
-      if (!(await pathExists(payloadPath))) {
+      // The candidate list mirrors the CLI's own resolution (see resolvePayloadPath /
+      // cliPayloadFileName above) so this pre-flight can neither accept a payload the CLI
+      // will reject, nor reject one the CLI would have found.
+      const payloadFileName = cliPayloadFileName(payload);
+      const payloadPath = await resolvePayloadPath(projectCwd, payloadFileName);
+      if (payloadPath === null) {
         return {
           content: [
             {
@@ -197,15 +230,18 @@ For the assistant:
               text: `Precondition not met: payload file not found.
 
 Project path: ${projectCwd}
-Expected payload file: ${payloadPath}
+Payload argument: ${payload}
+Resolved file name: ${payloadFileName}
+Locations checked: ${join(projectCwd, 'payload', payloadFileName)} and ${join(projectCwd, payloadFileName)}
 Requested project: ${project}
 Requested endpoint: ${endpoint}
 Requested database: ${dbTypeLabel}
 
 For the assistant:
 - The endpoint generator needs the payload file to exist before it can run.
+- The CLI lowercases the payload name and appends '.json', so '${payload}' can only ever match the file '${payloadFileName}'. If a file with different capitalisation exists, rename it to match.
 - Suggest generating or creating the payload first. The payload generator tool can introspect a database table into a payload JSON, or the user can author it manually in the payload/ folder.
-- When explaining to the user, say something like "the payload file '${payload}.json' isn't in the payload/ folder yet — should I generate it from a database table first, or do you have one to put there?". Do not mention internal tool names.`,
+- When explaining to the user, say something like "the payload file '${payloadFileName}' isn't in the payload/ folder yet — should I generate it from a database table first, or do you have one to put there?". Do not mention internal tool names.`,
             },
           ],
           isError: false, // per §3.4
@@ -273,7 +309,8 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Database: ${dbTypeLabel}
 Command: ${result.command}
 
@@ -303,7 +340,8 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Database: ${dbTypeLabel}
 Command: ${result.command}
 Exit code: ${result.exitCode}
@@ -341,7 +379,8 @@ For the assistant:
 Project path: ${projectCwd}
 Project: ${project}
 Endpoint: ${endpoint}
-Payload: payload/${payload}.json
+Payload: ${payload}
+Payload file: ${payloadPath}
 Database: ${dbTypeLabel}
 Overwrite mode: ${force ? 'force (existing files overwritten, previous versions archived)' : 'non-overwrite (no conflicting module was present)'}
 
