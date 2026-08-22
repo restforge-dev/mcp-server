@@ -31,6 +31,8 @@ DO NOT USE FOR:
 This tool runs: npx restforge schema init --schema-path=<path> in the given cwd.
 The CLI writes a JavaScript factory function file to the target path. The path must end with '.js' and the file must NOT already exist.
 
+There is no overwrite option here: '--schema-path' is the only flag the CLI accepts for this verb, and it has no '--force'. An existing target file is always an error, so this tool never overwrites anything. When the user really wants to replace an existing file, either the old file is removed first, or 'codegen_dbschema_template' is used in generate mode with force enabled — that is the verb that owns the overwrite path.
+
 IMPLEMENTATION NOTE (matters for cross-platform behaviour): schema init is a thin wrapper over 'schema template --table=dummy --generate --lang=sdf'. It therefore depends on the same native binary (sdf-tools.exe) that the template feature uses, and that binary is currently WINDOWS-ONLY. On a non-Windows host (or if the binary is missing from the installed package) the CLI exits with code 3 and no file is created — that is a platform limitation, not a user error.
 
 For scaffolding a real, fleshed-out table from the reference collection (e.g. sales_order, customer_invoice) instead of the minimal dummy skeleton, use 'codegen_dbschema_template' (generate mode).

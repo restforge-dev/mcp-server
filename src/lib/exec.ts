@@ -24,6 +24,14 @@ export interface ExecOptions {
    * newline matters).
    */
   stripFinalNewline?: boolean;
+  /**
+   * Stdin configuration for the subprocess. Default undefined = execa default
+   * ('pipe' with an open, never-ended stream). Set to 'ignore' when the wrapped
+   * CLI may reach an interactive readline prompt: with the default pipe the
+   * prompt waits for input that never arrives and the call only ends at the
+   * timeout, while 'ignore' delivers EOF immediately so the prompt cannot hang.
+   */
+  stdin?: 'ignore' | 'inherit' | 'pipe';
 }
 
 /**
@@ -35,7 +43,7 @@ export async function execProcess(
   args: string[],
   options: ExecOptions = {}
 ): Promise<ExecResult> {
-  const { cwd = process.cwd(), timeout = 60_000, env, stripFinalNewline = true } = options;
+  const { cwd = process.cwd(), timeout = 60_000, env, stripFinalNewline = true, stdin } = options;
   const fullCommand = `${command} ${args.join(' ')}`;
 
   // Merge env: parent env first, custom env overrides
@@ -47,6 +55,7 @@ export async function execProcess(
       timeout,
       reject: false,
       stripFinalNewline,
+      ...(stdin ? { stdin } : {}),
       ...(mergedEnv ? { env: mergedEnv } : {}),
     });
     return {

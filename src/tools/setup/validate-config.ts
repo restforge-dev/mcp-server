@@ -34,8 +34,10 @@ DO NOT USE FOR:
 Often called as the final step after 'setup_write_env' or 'setup_update_env'
 has filled in or changed credentials, to confirm that they actually work. // per §5.2
 
-This tool runs: npx restforge validate --config=<configFile> in the given cwd.
-This tool is READ-ONLY and safe to call repeatedly.
+This tool runs: npx restforge validate --config=<configFile> [--auto-create-db] in the given cwd.
+Without 'autoCreateDb' this tool is READ-ONLY and safe to call repeatedly.
+
+About 'autoCreateDb' (postgres/mysql only): when the target database does not exist yet, the CLI normally offers to create it. In this non-interactive context the CLI skips the creation and prints a hint that names the --auto-create-db flag. Setting autoCreateDb=true makes the CLI create the database instead, which is a WRITE operation on the database server — ask the user before enabling it. After a successful creation the CLI asks for a re-run, so validation has to be repeated to confirm the remaining components. The flag has no effect for sqlite (the file is created on first connect) or oracle (a service name, not a database), and the DB_USER needs the CREATE DATABASE privilege.
 
 PRESENTATION GUIDANCE:
 - Match the user's language. If the user writes in Indonesian, respond in Indonesian.
@@ -49,14 +51,18 @@ PRESENTATION GUIDANCE:
           .string()
           .default('db-connection.env')
           .describe('Config file name in the config/ folder. Default: db-connection.env'),
+        autoCreateDb: z
+          .boolean()
+          .optional()
+          .describe('Default false (CLI default). When true, the CLI creates the target database if it does not exist yet (postgres/mysql only, requires the CREATE DATABASE privilege). This writes to the database server, so confirm with the user first. Ignored for sqlite and oracle. After a creation the CLI asks for a re-run, so validation must be repeated.'),
       },
       annotations: {
         title: 'Validate Config',
-        readOnlyHint: true,
+        readOnlyHint: true,   // read-only in the default call; autoCreateDb=true is the opt-in write path
         idempotentHint: true,
       },
     },
-    async ({ cwd, configFile }) => {
+    async ({ cwd, configFile, autoCreateDb }) => {
       const projectCwd = resolve(cwd);
       const configPath = join(projectCwd, 'config', configFile);
 
@@ -84,11 +90,13 @@ For the assistant:
         };
       }
 
-      const result = await execProcess(
-        'npx',
-        ['restforge', 'validate', `--config=${configFile}`],
-        { cwd: projectCwd, timeout: 30_000 }
-      );
+      // The runtime parser matches '--auto-create-db' as a bare token (no '=value' form),
+      // and the flag is only appended when explicitly requested, so the default call
+      // produces exactly the same CLI invocation as before.
+      const cliArgs = ['restforge', 'validate', `--config=${configFile}`];
+      if (autoCreateDb === true) cliArgs.push('--auto-create-db');
+
+      const result = await execProcess('npx', cliArgs, { cwd: projectCwd, timeout: 30_000 });
 
       // Validation failure: real error per §3.4; structured per §3.5.
       if (!result.success) {
@@ -141,6 +149,7 @@ ${result.stdout || '(empty)'}
 For the assistant:
 - Confirm to the user that the license and external connections checked out.
 - Summarise in plain language which components were checked and passed (license, database, optional redis/kafka), based on what appears in the CLI output.
+- Read the CLI output before claiming everything passed: when the database did not exist, the CLI either reports that it created the database and asks for a re-run (autoCreateDb=true), or skips the creation and prints a hint about the auto-create flag (default). In the first case say the database was created and validate again; in the second case ask the user whether the database should be created.
 - Do not paste the raw CLI output unless the user explicitly asks. Do not echo license keys or credentials. Do not mention internal tool names.`,
           },
         ],

@@ -20,11 +20,17 @@ export function registerCodegenCreateEndpoint(server: McpServer): void {
       title: 'Create Endpoint Module',
       description: `Generate a project + endpoint module (submodule, model, metadata, demo files, optional audit migration) from an existing payload spec by wrapping restforge create. URL pattern produced: /api/{project}/{endpoint}/{action}.
 
-This tool is DESTRUCTIVE: it spawns the CLI which writes / overwrites files in 'src/modules/<project>/', 'src/models/<project>/', 'metadata/<project>/', 'examples/<project>/<endpoint>/', and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode. Internally the tool always passes '--force=true' to the CLI to bypass the CLI's interactive y/N readline prompt (which would deadlock in a no-TTY subprocess).
+This tool is DESTRUCTIVE BY DEFAULT: it spawns the CLI which writes / overwrites files in 'src/modules/<project>/', 'src/models/<project>/', 'metadata/<project>/', 'examples/<project>/<endpoint>/', and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode that reports what would change.
+
+The 'force' parameter controls the overwrite gate and defaults to TRUE, which means an existing module IS overwritten (the CLI archives the previous version first — see the safety net below). Passing force=false gives a non-overwrite path:
+- When nothing conflicts, the CLI generates normally — same result as force=true.
+- When the module already exists, the CLI prints a conflict summary and then asks its interactive y/N question. In this non-interactive context the question receives end-of-input immediately, so the CLI stops right there: NOTHING is written or overwritten, and the tool reports the run as aborted. This is the closest thing to a dry run for conflict detection: it tells you what already exists without touching it.
+- force=false also makes the CLI refuse to register a project under a different database type than the one already recorded in the registry, instead of silently switching it.
+Use force=false when the user wants to know whether a module already exists before committing to a regeneration; use the default force=true for a deliberate regeneration.
 
 Safety net: when the CLI overwrites an existing module, model, or query directory, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
 
-AI responsibility — IMPORTANT: because this tool always executes and may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
+AI responsibility — IMPORTANT: because this tool executes immediately and, with the default force=true, may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
 - "Saya akan generate endpoint <endpoint> di project <project> ({database}). Kalau modul/model lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
 - "I will generate <endpoint> under project <project> using <database>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
 
@@ -102,6 +108,18 @@ PRESENTATION GUIDANCE:
           .boolean()
           .optional()
           .describe('Default false (CLI default). When true, skip executing the audit table migration even if the payload has fieldPolicy.*.strategies containing "audit". The migration SQL file is still written to migrations/audit/ as documentation.'),
+        skipSchemaCheck: z
+          .boolean()
+          .optional()
+          .describe('Default false (CLI default). When true, skip validating the payload against the live database schema (escape hatch for an offline or unreachable database). The payload shape itself is still validated. Without it the CLI needs a database config, either the one recorded as default via the config tooling or an explicit one.'),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe('Default false (CLI default). When true, the CLI prints verbose diagnostic output. Useful when a previous run failed for an unclear reason; the extra output ends up in this tool result.'),
+        force: z
+          .boolean()
+          .default(true)
+          .describe('Default true — the existing behaviour: overwrite an existing module (the CLI archives the previous version as .archive.NNN first). Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but when the module already exists the CLI stops at its confirmation question without writing anything and this tool reports the run as aborted. force=false also blocks switching an already registered project to a different database type.'),
       },
       annotations: {
         title: 'Create Endpoint Module',
@@ -110,7 +128,19 @@ PRESENTATION GUIDANCE:
         idempotentHint: false,  // re-running creates new archive files and may execute audit migration again
       },
     },
-    async ({ cwd, project, endpoint, payload, database, createDemo, skipSqlValidation, noAuditMigration }) => {
+    async ({
+      cwd,
+      project,
+      endpoint,
+      payload,
+      database,
+      createDemo,
+      skipSqlValidation,
+      noAuditMigration,
+      skipSchemaCheck,
+      verbose,
+      force,
+    }) => {
       const projectCwd = resolve(cwd);
       const dbType = database ?? 'postgres';
 
@@ -166,9 +196,11 @@ For the assistant:
         };
       }
 
-      // Build CLI invocation. --force=true is hardcoded: it bypasses the interactive readline
-      // prompt that would otherwise deadlock the subprocess. Conflict detection and archive
-      // creation are delegated to the CLI (single source of truth — see conflict-checker.js).
+      // Build CLI invocation. force defaults to true, which reproduces the previous
+      // hardcoded '--force=true': it bypasses the CLI's interactive readline prompt.
+      // With force=false the flag is omitted (the CLI's own default is false), so the
+      // CLI runs its conflict check first. Conflict detection and archive creation are
+      // delegated to the CLI (single source of truth — see conflict-checker.js).
       const cliArgs = [
         'restforge',
         'endpoint',
@@ -177,11 +209,13 @@ For the assistant:
         `--name=${endpoint}`,
         `--payload=${payload}`,
         `--database=${dbType}`,
-        '--force=true',
       ];
+      if (force) cliArgs.push('--force=true');
       if (createDemo !== undefined) cliArgs.push(`--create-demo=${createDemo}`);
       if (skipSqlValidation !== undefined) cliArgs.push(`--skip-sql-validation=${skipSqlValidation}`);
       if (noAuditMigration !== undefined) cliArgs.push(`--no-audit-migration=${noAuditMigration}`);
+      if (skipSchemaCheck !== undefined) cliArgs.push(`--skip-schema-check=${skipSchemaCheck}`);
+      if (verbose !== undefined) cliArgs.push(`--verbose=${verbose}`);
 
       const result = await execProcess(
         'npx',
@@ -191,8 +225,51 @@ For the assistant:
           timeout: 120_000,
           env: { NODE_ENV: 'production' }, // suppress legacy banner output
           stripFinalNewline: true,
+          // Only the non-force path can reach the CLI's y/N readline prompt. Closing
+          // stdin there turns the prompt into immediate end-of-input, so the CLI stops
+          // instead of waiting for an answer that can never arrive (which would hold the
+          // call until the 120s timeout). The force path keeps the previous behaviour.
+          ...(force ? {} : { stdin: 'ignore' as const }),
         }
       );
+
+      // Non-force path: the CLI reached its confirmation question and got end-of-input,
+      // so it stopped before writing anything. The process still exits 0, hence this
+      // check must run before the success branch.
+      const abortedOnPrompt =
+        !force &&
+        result.success &&
+        result.stdout.includes('CONFLICTS DETECTED') &&
+        result.stdout.includes('(y/N)');
+
+      if (abortedOnPrompt) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Nothing was generated: the module already exists and force=false.
+
+Project path: ${projectCwd}
+Project: ${project}
+Endpoint: ${endpoint}
+Payload: payload/${payload}.json
+Database: ${dbType}
+Command: ${result.command}
+
+--- CLI output ---
+${result.stdout}
+--- end CLI output ---
+
+For the assistant:
+- Tell the user that no file was written or overwritten. The generator detected that this module already exists and stopped at its confirmation step.
+- Summarise from the CLI output which files conflict (the conflict summary lists them) and what the reported risk level is. Do not paste the raw output unless the user explicitly asks.
+- Offer the two real options in plain language: pick a different endpoint name, or regenerate deliberately and overwrite the existing files (the previous versions are archived as '.archive.NNN' in that case). Only regenerate after the user confirms.
+- Do not mention internal tool names or parameter names. Match the user's language.`,
+            },
+          ],
+          isError: false, // an expected, non-destructive outcome — not a failure
+        };
+      }
 
       // Branch C: CLI failure — real error per §3.4; structured per §3.5.
       if (!result.success) {
@@ -245,6 +322,7 @@ Project: ${project}
 Endpoint: ${endpoint}
 Payload: payload/${payload}.json
 Database: ${dbType}
+Overwrite mode: ${force ? 'force (existing files overwritten, previous versions archived)' : 'non-overwrite (no conflicting module was present)'}
 
 Generated artefacts (commonly produced by the CLI):
 - src/modules/${project}/${endpoint}.js (submodule)
