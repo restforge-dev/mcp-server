@@ -99,7 +99,7 @@ PRESENTATION GUIDANCE:
         createDemo: z
           .boolean()
           .optional()
-          .describe('Default true (CLI default). When true, generate demo files (curl, postman, insomnia) for testing the endpoint.'),
+          .describe("Default true (CLI default). When true, generate example files (curl, Postman, Insomnia) for testing the endpoint, under 'examples/<project>/<endpoint>/'. Maps to the CLI flag '--create-examples'; set it to false to skip those files."),
         skipSqlValidation: z
           .boolean()
           .optional()
@@ -112,6 +112,11 @@ PRESENTATION GUIDANCE:
           .boolean()
           .optional()
           .describe('Default false (CLI default). When true, skip validating the payload against the live database schema (escape hatch for an offline or unreachable database). The payload shape itself is still validated. Without it the CLI needs a database config, either the one recorded as default via the config tooling or an explicit one.'),
+        config: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Optional database config file (.env) used for the payload-vs-database schema validation, e.g. 'config/db-connection.env'. Resolved relative to the project folder. The CLI needs a config for that check unless skipSchemaCheck=true or a default config was recorded via the config tooling; set this when no default is recorded or when a specific config must be used. When omitted, the CLI falls back to its recorded default."),
         verbose: z
           .boolean()
           .optional()
@@ -140,6 +145,7 @@ PRESENTATION GUIDANCE:
       skipSchemaCheck,
       verbose,
       force,
+      config,
     }) => {
       const projectCwd = resolve(cwd);
       const dbType = database ?? 'postgres';
@@ -211,11 +217,14 @@ For the assistant:
         `--database=${dbType}`,
       ];
       if (force) cliArgs.push('--force=true');
-      if (createDemo !== undefined) cliArgs.push(`--create-demo=${createDemo}`);
+      // The CLI names this flag '--create-examples'; the MCP parameter keeps the older
+      // name 'createDemo' for client compatibility.
+      if (createDemo !== undefined) cliArgs.push(`--create-examples=${createDemo}`);
       if (skipSqlValidation !== undefined) cliArgs.push(`--skip-sql-validation=${skipSqlValidation}`);
       if (noAuditMigration !== undefined) cliArgs.push(`--no-audit-migration=${noAuditMigration}`);
       if (skipSchemaCheck !== undefined) cliArgs.push(`--skip-schema-check=${skipSchemaCheck}`);
       if (verbose !== undefined) cliArgs.push(`--verbose=${verbose}`);
+      if (config !== undefined) cliArgs.push(`--config=${config}`);
 
       const result = await execProcess(
         'npx',
