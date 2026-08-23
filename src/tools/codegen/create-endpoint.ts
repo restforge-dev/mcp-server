@@ -293,18 +293,34 @@ For the assistant:
       // Non-force path: the CLI reached its confirmation question and got end-of-input,
       // so it stopped before writing anything. The process still exits 0, hence this
       // check must run before the success branch.
+      //
+      // Detection keys on the readline question itself, because that is the only part of
+      // the conflict phase that reliably reaches the piped stdout. On platform 5.5.5 the
+      // console.log lines around the prompt ('CONFLICTS DETECTED', the risk message, the
+      // closing 'User cancelled: Operation aborted') never arrive in the pipe, while the
+      // readline question always does — the earlier AND-condition therefore never fired
+      // and an aborted run was reported as a success.
+      //
+      // '(y/N)' is used rather than the phrase 'overwrite existing files' because
+      // conflict-checker.js asks one of TWO questions: the plain
+      // '...proceed and overwrite existing files? (y/N): ' and, when a high severity
+      // system conflict is present, '...proceed despite high severity conflicts? (y/N): '.
+      // Keying on the first phrase would silently miss the second. '(y/N)' is still
+      // specific to this verb's prompt: inside the 'endpoint create' chain the conflict
+      // checker holds the only readline interface, so no other question can produce it.
+      // 'CONFLICTS DETECTED' stays as an additional OR signal for platform versions where
+      // the summary does reach stdout but the question does not.
+      const sawConfirmationPrompt = result.stdout.includes('(y/N)');
+      const sawConflictSummary = result.stdout.includes('CONFLICTS DETECTED');
       const abortedOnPrompt =
-        !force &&
-        result.success &&
-        result.stdout.includes('CONFLICTS DETECTED') &&
-        result.stdout.includes('(y/N)');
+        !force && result.success && (sawConfirmationPrompt || sawConflictSummary);
 
       if (abortedOnPrompt) {
         return {
           content: [
             {
               type: 'text',
-              text: `Nothing was generated: the module already exists and force=false.
+              text: `Aborted: nothing was generated. The endpoint already exists and force=false, so the CLI stopped at its overwrite confirmation.
 
 Project path: ${projectCwd}
 Project: ${project}
@@ -313,15 +329,17 @@ Payload: ${payload}
 Payload file: ${payloadPath}
 Database: ${dbTypeLabel}
 Command: ${result.command}
+Outcome: no file was created, overwritten, or archived; the registry was not updated
+Detected by: ${sawConflictSummary ? "the CLI's conflict summary" : "the CLI's overwrite confirmation question"} in the output below
 
 --- CLI output ---
 ${result.stdout}
 --- end CLI output ---
 
 For the assistant:
-- Tell the user that no file was written or overwritten. The generator detected that this module already exists and stopped at its confirmation step.
-- Summarise from the CLI output which files conflict (the conflict summary lists them) and what the reported risk level is. Do not paste the raw output unless the user explicitly asks.
-- Offer the two real options in plain language: pick a different endpoint name, or regenerate deliberately and overwrite the existing files (the previous versions are archived as '.archive.NNN' in that case). Only regenerate after the user confirms.
+- Tell the user that nothing was written, overwritten, or archived: the generator found that this endpoint already exists and stopped at its confirmation step before touching anything.
+- The captured output is often just the confirmation question itself — the per-file conflict summary and risk level are printed by the CLI but do not always reach this tool. Summarise the conflicting files or the risk level ONLY if they actually appear in the output above; never invent them. When they are absent, say plainly that the generator reported a conflict without listing details here.
+- Offer the two real continuations in plain language: (1) regenerate deliberately with overwriting enabled, in which case the existing files are archived as '.archive.NNN' before being replaced, or (2) leave the existing module untouched and change nothing. Generating under a different endpoint name is a variant of option 2 — it creates a new module and leaves the existing one alone. Only regenerate after the user confirms.
 - Do not mention internal tool names or parameter names. Match the user's language.`,
             },
           ],
@@ -382,7 +400,7 @@ Endpoint: ${endpoint}
 Payload: ${payload}
 Payload file: ${payloadPath}
 Database: ${dbTypeLabel}
-Overwrite mode: ${force ? 'force (existing files overwritten, previous versions archived)' : 'non-overwrite (no conflicting module was present)'}
+Overwrite mode: ${force ? 'force (existing files overwritten, previous versions archived)' : 'non-overwrite (force=false; the CLI ran to completion without stopping at an overwrite confirmation)'}
 
 Generated artefacts (commonly produced by the CLI):
 - src/modules/${project}/${endpoint}.js (submodule)
