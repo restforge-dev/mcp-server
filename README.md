@@ -6,9 +6,9 @@ MCP (Model Context Protocol) server for the RESTForge Platform. Exposes RESTForg
 
 ## Requirements
 
-- Node.js >= 20
-- npm >= 9
-- For full setup workflow: PostgreSQL / MySQL / Oracle, RESTForge license key
+- Node.js >= 18
+- `@restforgejs/platform` installed **locally** in the target project's `node_modules`. Almost every tool runs `npx restforge ...` inside the project folder, so a local install is mandatory. Global installation of the platform is not supported.
+- For the full setup workflow: a supported database (PostgreSQL, MySQL, Oracle, or SQLite) and a RESTForge license key
 
 ## Access & License
 
@@ -22,32 +22,53 @@ License key acquisition:
 - **Commercial Trial** — Coming soon. Register interest at [restforge.dev](https://restforge.dev)
 - **Commercial License** — Available upon general release
 
-Without a valid license key, MCP tools that depend on the platform runtime (e.g. `setup_validate_config`, `codegen_*`, `runtime_*`) will return authentication errors.
+Without a valid license key, the tools that reach into the platform runtime return authentication errors from the CLI. That covers the whole `codegen_*`, `runtime_*`, and `data_*` domains plus `setup_validate_config`.
 
-## Installation
+The `designer_*` domain runs without a license, because the license mechanism has been removed from the `restforge-designer` binary. That binary is still distributed inside `@restforgejs/platform`, so the "installed locally" requirement still applies to it.
+
+## Installation & Registration
+
+The MCP server is not installed globally. It is registered per MCP client, and the entry runs through `npx` so the client always resolves the current version when it starts the server.
+
+The recommended path is the skills installer, which writes both the RESTForge skills and the MCP entry in one step:
 
 ```bash
-npm install -g @restforgejs/mcp-server
+npx create-restforge-skills
 ```
 
-After installation, the `restforge-mcp` command is available in PATH.
+The installer merges the following entry into the MCP client config (merge, not overwrite):
+
+```json
+{
+  "mcpServers": {
+    "restforge": {
+      "command": "npx",
+      "args": ["-y", "@restforgejs/mcp-server"]
+    }
+  }
+}
+```
+
+The same entry can be written by hand when registration is managed manually. See the per-client examples in [Quick Start](#quick-start) below.
+
+**Alternative — the `restforge-mcp` binary.** The package also registers a `restforge-mcp` bin entry, so `"command": "restforge-mcp"` is a valid alternative in any of the config snippets below. It only resolves when the package is already present in the environment that launches the client, and it is not the recommended installation path.
 
 ## Quick Start
 
-### 1. Verify Install
+### 1. Verify the server responds
 
 ```bash
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | restforge-mcp
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | npx -y @restforgejs/mcp-server
 ```
 
-Output should list 39 tools across the `health_*`, `setup_*`, `codegen_*`, and `runtime_*` domains.
+Output should list 69 tools across the nine domains described in [Available Tools](#available-tools).
 
-### 2. Register with MCP Client
+### 2. Register with an MCP Client
 
 **Claude CLI** (user scope, applies to all projects):
 
 ```bash
-claude mcp add --transport stdio --scope user restforge -- restforge-mcp
+claude mcp add --transport stdio --scope user restforge -- npx -y @restforgejs/mcp-server
 ```
 
 **Cursor** (`.cursor/mcp.json` in project root):
@@ -56,7 +77,8 @@ claude mcp add --transport stdio --scope user restforge -- restforge-mcp
 {
   "mcpServers": {
     "restforge": {
-      "command": "restforge-mcp"
+      "command": "npx",
+      "args": ["-y", "@restforgejs/mcp-server"]
     }
   }
 }
@@ -68,7 +90,8 @@ claude mcp add --transport stdio --scope user restforge -- restforge-mcp
 {
   "mcpServers": {
     "restforge": {
-      "command": "restforge-mcp"
+      "command": "npx",
+      "args": ["-y", "@restforgejs/mcp-server"]
     }
   }
 }
@@ -88,85 +111,32 @@ The agent orchestrates the appropriate tools to fulfill the request end-to-end.
 
 ## Available Tools
 
-39 tools organized by domain. AI agents call these via the MCP protocol; end users do not invoke them directly.
+69 tools grouped into nine domains by name prefix. AI agents call these via the MCP protocol; end users do not invoke them directly.
 
-### Health Domain (1 tool)
+| Domain | Count | Coverage | Representative tools |
+|---|---|---|---|
+| `setup_*` | 13 | Project folder, package installation, `db-connection.env` config, recorded default config, connection validation | `setup_install_package`, `setup_write_env`, `setup_validate_config`, `setup_set_default_config` |
+| `codegen_*` | 27 | SDF (`schema`), RDF (`payload`), endpoint / processor / dashboard / kafka / test generators, grounding catalogs, SQL validation | `codegen_dbschema_migrate`, `codegen_generate_payload`, `codegen_create_endpoint`, `codegen_get_dbschema_catalog` |
+| `designer_*` | 11 | Frontend generator: project init, plugins, UDF catalog, validate / preview / generate, auth overlay | `designer_init_project`, `designer_get_udf_catalog`, `designer_generate`, `designer_auth_create` |
+| `runtime_*` | 7 | Project and config detection, preflight checks, server status, server and consumer launcher generation | `runtime_validate_preflight`, `runtime_generate_launcher`, `runtime_check_status` |
+| `project_*` | 4 | Project listing and deletion, backend auth extension, SDK client generation | `project_list`, `project_auth`, `project_sdk_generate` |
+| `key_*` | 3 | Project API key management | `key_generate`, `key_list`, `key_revoke` |
+| `data_*` | 2 | Table row export and import across dialects | `data_pull`, `data_push` |
+| `license_*` | 1 | Machine license activation status | `license_info` |
+| `health_*` | 1 | MCP transport smoke test | `health_ping` |
 
-| Tool | Description |
-|------|-------------|
-| `health_ping` | Smoke test MCP transport. Returns `pong` + ISO timestamp + server version |
+The full per-tool specification — every tool name, the CLI verb it wraps, its parameters, and where its behaviour differs from the CLI — lives in the `mcp/` section of the RESTForge Handbook. That section is the single reference for the surface; this table is a summary and deliberately does not restate all 69 rows. The live surface of any installed version is always discoverable through the MCP `tools/list` method.
 
-### Setup Domain (9 tools)
+Tool names are a public contract. Adding or removing a tool without updating the corresponding handbook page counts as drift.
 
-| Tool | Description |
-|------|-------------|
-| `setup_create_folder` | Create a new project folder for RESTForge |
-| `setup_install_package` | Install `@restforgejs/platform` into the project's `node_modules` via npm |
-| `setup_init_config` | Generate skeleton config and sample payloads via `restforge init` |
-| `setup_write_env` | Write `config/db-connection.env` with license, server, and database settings |
-| `setup_read_env` | Read current values from `config/db-connection.env` |
-| `setup_update_env` | Update individual fields in `config/db-connection.env` |
-| `setup_validate_config` | Validate license and connections to database, redis, and kafka |
-| `setup_get_config_schema` | Get JSON schema of all 63 parameters available in `db-connection.env` |
-| `setup_get_init_template` | Get raw `db-connection.env` template content |
+### Cross-domain behaviour worth knowing
 
-### Codegen Domain (23 tools)
+- **`cwd` parameter** — almost every tool takes an absolute project path that determines which `@restforgejs/platform` installation runs, which config resolves, and where generated files are written. `health_ping` has no `cwd`, `setup_create_folder` uses `parentCwd`, and `designer_get_udf_catalog` treats it as optional.
+- **Preconditions are not errors** — a missing package, config file, or payload file comes back as an ordinary response explaining the next step, so the agent offers setup instead of reporting a failure. Only genuine CLI failures are flagged as errors.
+- **Hardcoded flags on destructive tools** — `project_delete` and `key_revoke` send `--yes`, `designer_auth_remove` sends `--force`, and `codegen_create_endpoint` / `codegen_create_dashboard` send `--force=true` while their `force` parameter stays at its `true` default. The CLI's own confirmation prompt is gone, so the agent must confirm with the user beforehand.
+- **Sensitive value masking** — `setup_read_env` masks `LICENSE`, `DB_PASSWORD`, `REDIS_PASSWORD`, and `KAFKA_SASL_PASSWORD` unless `unmask` is set; `key_list` masks API keys unless `showFull` is set.
 
-Live database introspection:
-
-| Tool | Description |
-|------|-------------|
-| `codegen_list_tables` | List all tables in the project's database (live introspection) |
-| `codegen_describe_table` | Describe columns, primary key, and foreign keys of a specific table |
-
-Schema-as-code (dbschema-kit / SDF):
-
-| Tool | Description |
-|------|-------------|
-| `codegen_dbschema_init` | Create a new dbschema-kit schema definition skeleton file (minimal starter) |
-| `codegen_dbschema_template` | Browse, preview, and generate from the Schema Reference collection (87 templates across 30+ domains) |
-| `codegen_dbschema_validate` | Validate dbschema-kit definition files (single-model structure + cross-model FK checks) |
-| `codegen_dbschema_models` | List dbschema-kit models with a structural summary (fields, keys, indexes, relations) |
-| `codegen_dbschema_introspect` | Reverse-engineer an existing database into dbschema-kit definition files |
-| `codegen_dbschema_generate_ddl` | Generate dialect-specific DDL (CREATE TABLE/INDEX, optional DROP) from dbschema-kit files |
-| `codegen_dbschema_migrate` | Apply dbschema-kit files to a live database (load → validate → DDL → apply; DESTRUCTIVE with `drop=true`) |
-| `codegen_dbschema_diff` | Detect schema drift between dbschema-kit files and the live database (read-only, bidirectional) |
-| `codegen_dbschema_apply` | Resolve schema drift to the live database via incremental `ALTER` (additive-only by default; opt-in destructive) |
-
-Payload, scaffolding, and SQL:
-
-| Tool | Description |
-|------|-------------|
-| `codegen_generate_payload` | Generate payload JSON from a database table |
-| `codegen_validate_payload` | Validate payload JSON structure and constraints |
-| `codegen_validate_dashboard_payload` | Validate dashboard payload structure |
-| `codegen_diff_payload` | Diff payload JSON against the database schema |
-| `codegen_sync_payload` | Sync payload JSON with the database schema |
-| `codegen_create_endpoint` | Scaffold an endpoint module from a payload spec |
-| `codegen_create_dashboard` | Scaffold a dashboard module from a payload spec |
-| `codegen_validate_sql` | Validate a SELECT or WITH (CTE) SQL statement via EXPLAIN against the live database |
-
-Grounding catalogs:
-
-| Tool | Description |
-|------|-------------|
-| `codegen_get_field_validation_catalog` | Get the field validation catalog (for grounding payload constraints) |
-| `codegen_get_query_declarative_catalog` | Get the query declarative catalog (for grounding query JSON) |
-| `codegen_get_dashboard_catalog` | Get the dashboard widget catalog (for grounding dashboard config) |
-| `codegen_get_dbschema_catalog` | Get the dbschema (SDF) catalog: model options, field types, and the soft-delete contract (for grounding schema definition files) |
-
-### Runtime Domain (6 tools)
-
-| Tool | Description |
-|------|-------------|
-| `runtime_detect_project` | Scan `src/modules/*.js` to list project names |
-| `runtime_detect_config` | Scan `config/*.env` to list available config files |
-| `runtime_validate_preflight` | Validate config + check PID file + check port availability before launch |
-| `runtime_check_launcher_exists` | Check if launcher files (`server-start.bat`/`.sh`, `ecosystem.config.js`) exist in the project root |
-| `runtime_generate_launcher` | Generate `server-start.bat`/`.sh` + `server-stop.bat`/`.sh` (and `ecosystem.config.js` for PM2 mode) |
-| `runtime_check_status` | Detect if the server is running (host or PM2 mode) with optional HTTP health probe |
-
-> **Runtime principle**: AI agents never start, stop, or restart the server directly. The runtime tools only generate launcher scripts that the user executes themselves, so the running server lives independently of the AI session.
+> **Runtime principle**: AI agents never start, stop, or restart the server directly. The runtime tools only generate launcher scripts that the user executes themselves, so the running server lives independently of the AI session. The same two-step pattern applies to Kafka consumers via `runtime_generate_consumer_launcher`.
 
 ## Compatibility
 
