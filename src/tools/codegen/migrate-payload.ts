@@ -35,8 +35,16 @@ Cross-reference (downstream UDF flow):
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The named RDF payload file must exist (resolved relative to cwd or cwd/payload/).
-- Without --overwrite, the command fails if any split output file already exists in the output directory.
+- Without --overwrite, the command fails if a page file it would write already exists under pages/, or if app-config.json exists without its aggregator.
   This tool does not pre-check those — if the CLI fails, the failure response will surface the cause.
+
+Adding tables to an existing app (multi-page):
+- Run this tool once per RDF with the same output directory and project. The app counts as existing when app-config.json and the aggregator <appCode>.json are already in the output directory.
+- For an existing app, only the new page file is written; overwrite is NOT needed to add a new table.
+- The aggregator is merged: the new page's include and navigation item are added without duplicates, and existing homepage, labels, and icons are kept.
+- app-config.json is merged: existing appConfig values are kept and missing properties are added. Exception: dateFormat and dateTimeFormat are always rewritten from DATEFORMAT/DATETIMEFORMAT in the backend config, so frontend date patterns stay identical to the backend.
+- These merge rules apply with or without overwrite; overwrite only replaces page files that already exist.
+- If app-config.json in the output directory belongs to a different appCode, the command stops before writing any file.
 
 PRESENTATION GUIDANCE:
 - Match the user's language. If the user writes in Indonesian, respond in Indonesian.
@@ -92,7 +100,7 @@ PRESENTATION GUIDANCE:
         overwrite: z
           .boolean()
           .optional()
-          .describe('Overwrite existing split output files. Without it, the command fails if any split file already exists in the output directory.'),
+          .describe('Overwrite page files under pages/ that already exist (and app-config.json when no aggregator exists yet). Not needed to add a new table to an existing app. The aggregator and app-config.json of an existing app are always merged, never replaced.'),
       },
       annotations: {
         title: 'Migrate Payload (RDF backend -> UDF frontend)',
@@ -174,7 +182,8 @@ For the assistant:
 - Summarise the most likely cause from the CLI output in plain language. Common causes:
   * The named RDF payload was not found — it is resolved relative to cwd or cwd/payload/. Suggest checking the file name and location.
   * The database config could not be read (missing or incomplete SERVER_ADDRESS/SERVER_PORT), or no default config is set. Suggest pointing at a valid config file.
-  * Output files already exist and --overwrite was not set — suggest re-running with overwrite enabled or choosing a different output directory.
+  * A page file for this table already exists and --overwrite was not set — suggest re-running with overwrite enabled or choosing a different output directory.
+  * app-config.json in the output directory belongs to a different app (appCode mismatch) — suggest a different output directory, or using the existing app's code as project/appCode to add the page to that app.
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.`,
             },
           ],
