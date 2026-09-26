@@ -23,7 +23,9 @@ USE WHEN:
 FK EXPANSION (expandFk):
 - 'expandFk' is opt-in and REQUIRES 'table' (single-table target). Without 'expandFk' the sync behavior is unchanged (pure schema drift).
 - When set, the CLI builds a JOIN from the table's foreign keys, writes query/<table>-join.sql, and rewrites datatablesQuery/viewQuery to reference it — this is how join columns get into datatables (the generator does NOT produce them).
-- 'fkColumns' is optional: a comma-separated list of QUALIFIED 'table.column' entries (e.g. 'supplier.supplier_code,supplier.supplier_name'). When omitted, the display column per FK is auto-resolved (name/nama -> code/kode -> primary key).
+- 'fkColumns' is optional: a comma-separated list of QUALIFIED 'table.column' entries (e.g. 'supplier.supplier_code,supplier.supplier_name'). When omitted, the display column per FK is auto-resolved (name/nama -> code/kode -> number/nomor/no/num -> title/judul/label -> first UNIQUE text column). The primary key is never used as a display column.
+- 'expandFkSkip' is optional: a comma-separated list of referenced tables ('ref_table', or 'local_fk_col:ref_table' for one of several FKs to the same table) to leave out of the JOIN while the other FKs are still expanded.
+- When a referenced table has no display column candidate, the CLI fails (this tool always runs non-interactively) with "No natural display column found for referenced table ..." and lists the available columns. Ask the user which column to show or whether to skip that relation, then retry with 'fkColumns' or 'expandFkSkip'. Do not pick a column on the user's behalf.
 - If the table has no foreign keys, the CLI reports it and makes no JOIN — relay that to the user.
 
 DO NOT USE FOR:
@@ -32,7 +34,7 @@ DO NOT USE FOR:
 - Generating a payload from scratch for a table that has no payload yet -> use 'codegen_generate_payload'
 - Cleaning up or deleting old '.archive.NNN' files — this tool does not handle archive cleanup; the user must remove archive files manually if desired
 
-This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--expand-fk [--fk-columns=table.col,table.col]] in the given cwd.
+This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd.
 The CLI reads existing payload JSON files from the project payload/ directory, connects to the database described
 in the config file, and rewrites each payload file whose schema has drifted. Before overwriting, the
 previous file content is renamed to '<filename>.archive.NNN' (NNN is a sequential number starting at 001).
@@ -77,6 +79,11 @@ PRESENTATION GUIDANCE:
           .min(1)
           .optional()
           .describe("Override display columns for specific FKs. Format: 'ref_table.column' for unambiguous FKs, or 'local_fk_col:ref_table.column' to disambiguate when the same table is referenced by multiple FK columns (e.g. 't_group_id:t_group.nama,t_group_id_d1:t_group.kode'). FKs not listed here are auto-resolved. When omitted entirely, all FKs are auto-resolved; duplicate FK targets are auto-disambiguated using the local FK column name as prefix."),
+        expandFkSkip: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Referenced tables to leave out of the FK expansion. Format: 'ref_table', or 'local_fk_col:ref_table' to skip only one of several FKs to the same table (e.g. 'shift_pattern,approver_id:employee'). The other FKs are still expanded. A relation must not appear in both fkColumns and expandFkSkip. REQUIRES expandFk."),
       },
       annotations: {
         title: 'Sync Payload',
@@ -84,7 +91,7 @@ PRESENTATION GUIDANCE:
         idempotentHint: false,  // memanggil ulang dapat menambah file archive baru jika DB berubah lagi di antara panggilan
       },
     },
-    async ({ cwd, config, table, expandFk, fkColumns }) => {
+    async ({ cwd, config, table, expandFk, fkColumns, expandFkSkip }) => {
       const projectCwd = resolve(cwd);
 
       // FK expansion requires a single-table target. Guard before touching the
@@ -104,6 +111,28 @@ Requested: expandFk without a table
 For the assistant:
 - FK expansion (expandFk) only works on a single table, so a 'table' must be provided.
 - Ask the user which table to expand, then retry with that table.
+- Do not mention internal tool names in the reply to the user.`,
+            },
+          ],
+          isError: false, // per §3.4
+        };
+      }
+
+      // expandFkSkip hanya bermakna bersama expandFk; CLI juga menolaknya.
+      if (expandFkSkip && !expandFk) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Precondition not met: skipping FK relations needs FK expansion.
+
+Project path: ${projectCwd}
+Config: ${config}
+Requested: expandFkSkip without expandFk
+
+For the assistant:
+- expandFkSkip only applies when FK expansion (expandFk) is enabled.
+- Ask the user whether FK expansion should be enabled for this table, then retry with both expandFk and expandFkSkip.
 - Do not mention internal tool names in the reply to the user.`,
             },
           ],
@@ -145,6 +174,7 @@ For the assistant:
       if (expandFk) {
         args.push(`--expand-fk=${expandFk}`);
         if (fkColumns) args.push(`--fk-columns=${fkColumns}`);
+        if (expandFkSkip) args.push(`--expand-fk-skip=${expandFkSkip}`);
       }
 
       // Timeout raised to 60s (vs 30s for validate/diff): sync writes payload files
@@ -177,6 +207,7 @@ ${result.stderr}
 For the assistant:
 - Tell the user that updating the payload files did not complete successfully.
 - Summarise the likely cause from the CLI output in plain language (common causes: the config file is missing or has incomplete credentials, the database is unreachable, the requested table does not exist, or the payload directory is empty). Do not paste the raw stdout/stderr unless the user explicitly asks.
+- If the output contains "No natural display column found for referenced table", FK expansion could not decide which column of that referenced table to show. Relay the table name and the listed available columns, ask the user which column to show or whether to leave that relation out, then retry with fkColumns ('ref_table.column') or expandFkSkip ('ref_table'). Do not choose the column yourself.
 - Reassure the user: when a sync run fails, the CLI automatically restores any payload file that was just archived back to its original name, so the active payload files are not left in a corrupted state.
 - Offer to retry once the underlying issue is resolved. Do not mention internal tool names.`,
             },
@@ -199,7 +230,7 @@ For the assistant:
 Project path: ${projectCwd}
 Config: ${config}
 Table: ${table ?? 'all'}
-FK expansion: ${expandFk ? `on${fkColumns ? ` (fk-columns: ${fkColumns})` : ' (auto-resolved display columns)'}` : 'off'}
+FK expansion: ${expandFk ? `on${fkColumns ? ` (fk-columns: ${fkColumns})` : ' (auto-resolved display columns)'}${expandFkSkip ? ` (skipped: ${expandFkSkip})` : ''}` : 'off'}
 Command: ${result.command}
 
 --- CLI output ---
