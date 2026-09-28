@@ -109,6 +109,36 @@ In your AI client chat, type prompts like:
 
 The agent orchestrates the appropriate tools to fulfill the request end-to-end.
 
+## Installation for Codex
+
+Codex uses its own MCP configuration. Registering RESTForge in Claude Code does not register it in Codex.
+
+With the Codex CLI and Node.js available on your `PATH`, run the following in a terminal (including PowerShell on Windows):
+
+```bash
+codex mcp add restforge -- npx -y @restforgejs/mcp-server
+```
+
+This registers the stdio server in the user-level Codex configuration at `~/.codex/config.toml` (`%USERPROFILE%\.codex\config.toml` on Windows). Codex launches the package through `npx`; no global installation of the MCP package is required.
+
+Verify that the entry is registered:
+
+```bash
+codex mcp list
+```
+
+Alternatively, add the following section to `config.toml` manually, preserving any existing configuration. If a `restforge` entry already exists, update it instead of adding a duplicate table:
+
+```toml
+[mcp_servers.restforge]
+command = "npx"
+args = ["-y", "@restforgejs/mcp-server"]
+```
+
+Restart your Codex client and start a new session to load the server. Ask Codex to call RESTForge's `health_ping` tool to verify that the MCP connection works; `codex mcp list` only confirms registration.
+
+The [Requirements](#requirements) above still apply when operating a RESTForge project, including installing `@restforgejs/platform` locally in that project.
+
 ## Available Tools
 
 69 tools grouped into nine domains by name prefix. AI agents call these via the MCP protocol; end users do not invoke them directly.
