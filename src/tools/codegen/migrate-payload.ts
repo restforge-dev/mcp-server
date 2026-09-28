@@ -35,15 +35,22 @@ Cross-reference (downstream UDF flow):
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The named RDF payload file must exist (resolved relative to cwd or cwd/payload/).
-- Without --overwrite, the command fails if a page file it would write already exists under pages/, or if app-config.json exists without its aggregator.
+- Without --overwrite, the command fails if app-config.json exists without its aggregator, or if an existing page file cannot be parsed.
   This tool does not pre-check those — if the CLI fails, the failure response will surface the cause.
 
 Adding tables to an existing app (multi-page):
 - Run this tool once per RDF with the same output directory and project. The app counts as existing when app-config.json and the aggregator <appCode>.json are already in the output directory.
-- For an existing app, only the new page file is written; overwrite is NOT needed to add a new table.
+- For an existing app, overwrite is NOT needed to add a new table, even when the new table JOINs a table whose page already exists.
 - The aggregator is merged: the new page's include and navigation item are added without duplicates, and existing homepage, labels, and icons are kept.
 - app-config.json is merged: existing appConfig values are kept and missing properties are added. Exception: dateFormat and dateTimeFormat are always rewritten from DATEFORMAT/DATETIMEFORMAT in the backend config, so frontend date patterns stay identical to the backend.
-- These merge rules apply with or without overwrite; overwrite only replaces page files that already exist.
+- These aggregator and app-config.json merge rules apply with or without overwrite.
+
+Re-migrating a page that already exists (customization is kept):
+- Without overwrite, an existing page file under pages/ is merged, not replaced. Values the user changed in the page (titles, labels, placeholders, widths, layout, removed fields, fieldRows, and other blocks) are kept, and RDF changes to values the user did not touch are applied. New RDF columns are added to fields and, when the page uses fieldRows, as a new row.
+- The merge uses a snapshot of the last generated page stored under <output>/.meta/pages/<pageId>.json. The snapshot is managed by the CLI and should be committed together with the page files; do not edit it.
+- When the user and the RDF both changed a backend contract property (apiPath, primaryKey, type, required, maxlength, decimalPlaces, tableField, dataSource type/resource, option values), the RDF value is used and a warning is printed. Actions disabled in the RDF and temporalType always follow the RDF.
+- A page created before snapshots existed keeps its differing values but does not receive new fields; the CLI prints a warning listing them, and the next run uses the full merge.
+- Overwrite recreates the page from scratch, discarding customization; the previous file is archived under .restforge/archive/.
 - If app-config.json in the output directory belongs to a different appCode, the command stops before writing any file.
 
 PRESENTATION GUIDANCE:
@@ -100,12 +107,12 @@ PRESENTATION GUIDANCE:
         overwrite: z
           .boolean()
           .optional()
-          .describe('Overwrite page files under pages/ that already exist (and app-config.json when no aggregator exists yet). Not needed to add a new table to an existing app. The aggregator and app-config.json of an existing app are always merged, never replaced.'),
+          .describe('Recreate existing page files under pages/ from scratch, discarding customization (and replace app-config.json when no aggregator exists yet). Not needed to add a new table or to bring RDF changes into an existing page, because existing pages are merged by default. The aggregator and app-config.json of an existing app are always merged, never replaced.'),
       },
       annotations: {
         title: 'Migrate Payload (RDF backend -> UDF frontend)',
         readOnlyHint: false,
-        idempotentHint: false, // re-running can fail or overwrite depending on --overwrite
+        idempotentHint: false, // re-running merges existing pages, or recreates them with --overwrite
         destructiveHint: false,
       },
     },
@@ -182,7 +189,8 @@ For the assistant:
 - Summarise the most likely cause from the CLI output in plain language. Common causes:
   * The named RDF payload was not found — it is resolved relative to cwd or cwd/payload/. Suggest checking the file name and location.
   * The database config could not be read (missing or incomplete SERVER_ADDRESS/SERVER_PORT), or no default config is set. Suggest pointing at a valid config file.
-  * A page file for this table already exists and --overwrite was not set — suggest re-running with overwrite enabled or choosing a different output directory.
+  * An existing page file could not be parsed — suggest fixing the JSON file, or re-running with overwrite enabled to recreate the page from scratch (customization in that page is lost).
+  * app-config.json exists without its aggregator and --overwrite was not set — suggest re-running with overwrite enabled or choosing a different output directory.
   * app-config.json in the output directory belongs to a different app (appCode mismatch) — suggest a different output directory, or using the existing app's code as project/appCode to add the page to that app.
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.`,
             },
