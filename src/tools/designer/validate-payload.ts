@@ -66,7 +66,7 @@ PRESENTATION GUIDANCE:
     async ({ cwd, payload, pluginsDir }) => {
       const projectCwd = resolve(cwd);
 
-      // Precondition check: the restforge-designer binary must be reachable on PATH.
+      // Precondition check: `npx restforge-designer` must resolve to the binary bundled in the local @restforgejs/platform.
       // Treated as a non-error precondition per the authoring guide §3.4. The probe
       // distinguishes "binary missing" (precondition) from "binary ran and reported
       // something" (which falls through to the real execution below).

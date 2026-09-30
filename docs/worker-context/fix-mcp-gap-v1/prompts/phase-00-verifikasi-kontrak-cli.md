@@ -53,7 +53,7 @@ Untuk tiap klaim, tentukan verdict `CONFIRMED` / `REFUTED` / `PARTIAL` disertai 
    Sertakan jejak kode lengkap dari parsing sampai konsumsi.
 4. **Verb `project sdk`.** Ada di source? Flag aktual vs dokumentasi handbook
    (`--generate`, `--project`, `--sdk-path`, `--base-url`, `--force`).
-5. **`restforge-designer auth --attach`.** Ada di source designer (periksa
+5. **`npx restforge-designer auth --attach`.** Ada di source designer (periksa
    `packages/designer/src/cli/` dan/atau distribusi binary designer di platform)?
    Paritas parameternya dengan `--create`.
 6. **Verb `license info` dan `license deactivate`.** Ada di source? Flag aktual.

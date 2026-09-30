@@ -62,7 +62,7 @@ PRESENTATION GUIDANCE:
     async ({ cwd, id, output, pluginsDir }) => {
       const projectCwd = resolve(cwd);
 
-      // Precondition check: the restforge-designer binary must be reachable on PATH.
+      // Precondition check: `npx restforge-designer` must resolve to the binary bundled in the local @restforgejs/platform.
       // Treated as a non-error precondition per the authoring guide §3.4.
       const probe = await execProcess('npx', ['restforge-designer', '--version'], {
         cwd: projectCwd,

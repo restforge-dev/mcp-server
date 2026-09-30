@@ -334,11 +334,11 @@ Prefer the 'designer_*' tools when the user wants to:
 - Phrases like "generate frontend", "build the UI from this payload",
   "generate aplikasi frontend", "preview file frontend", "buat project
   frontend dari plugin", "validate UDF", or any mention of
-  "restforge-designer", "designer", "rfd", or "frontend generation"
+  "restforge-designer", "designer", or "frontend generation"
 
 Detection signals that this is RESTForge Designer (frontend) work:
 - RESTForge Designer is available via 'npx restforge-designer' (bundled in
-  @restforgejs/platform; alias 'rfd' when a standalone build is on PATH)
+  @restforgejs/platform)
 - The user mentions UDF (UI Definition File), frontend generation, or a
   designer plugin ('vanilla-js-*')
 - A frontend project folder with a UDF payload (payload/NN-<name>.json

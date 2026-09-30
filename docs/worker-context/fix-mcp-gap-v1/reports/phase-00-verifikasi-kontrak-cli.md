@@ -22,7 +22,7 @@ output CLI nyata. Tidak ada command mutasi yang dijalankan.
 - [x] Klaim 2 — `schema validate --format json`
 - [x] Klaim 3 — Perilaku `dashboard create --validate-only`
 - [x] Klaim 4 — Verb `project sdk`
-- [x] Klaim 5 — `restforge-designer auth --attach`
+- [x] Klaim 5 — `npx restforge-designer auth --attach`
 - [x] Klaim 6 — Verb `license info` dan `license deactivate`
 - [x] Klaim 7 — Binary `restforge-consumer` dan `restforge-consumer-deploy`
 - [x] Klaim 8 — `--path` pada `schema apply` dan `--resource` pada `endpoint create`
@@ -48,7 +48,7 @@ Tidak ada file source, konfigurasi, maupun dokumentasi yang diubah di repo mana 
 | 2 | `schema validate` punya `--format json` | **REFUTED** di level CLI (kapabilitas ada di library, tidak ter-wire) | `generators/cli/schema/validate.js:10-12,17-23,68`, `generators/lib/dbschema-kit/validator/validator-reporter.js:48,116` |
 | 3 | `dashboard create --validate-only` diterima lalu diabaikan | **REFUTED** — flag ditolak keras, exit 2, handler tidak pernah jalan | `generators/lib/arg-parser.js:91-100`, `generators/cli-entry.js:151-162`, `generators/cli/dashboard/create.js:32-...` |
 | 4 | Verb `project sdk` ada dan flag-nya cocok handbook | **CONFIRMED** — cocok 100% | `generators/cli/project/sdk.js`, `restforge-handbook/commands/restforge-backend/project/sdk.md` |
-| 5 | `restforge-designer auth --attach` ada, paritas dengan `--create` | **CONFIRMED** | `packages/designer/src/cli/mod.rs:156-201`, `src/cli/auth.rs:629-651,674-675,848` |
+| 5 | `npx restforge-designer auth --attach` ada, paritas dengan `--create` | **CONFIRMED** | `packages/designer/src/cli/mod.rs:156-201`, `src/cli/auth.rs:629-651,674-675,848` |
 | 6 | Verb `license info` dan `license deactivate` ada | **CONFIRMED** | `packages/platform/server.js:430-440,741,1744-1748,3566,3614-3617` |
 | 7 | Binary `restforge-consumer` + `restforge-consumer-deploy` terdaftar sebagai bin | **CONFIRMED** dengan satu drift flag pada handbook | `packages/platform/package.json` (blok `bin`), `cli/consumer.js:157-177,591-603`, `cli/consumer-deploy.js:71-87` |
 | 8 | `--path` diterima `schema apply`; `--resource` diterima `endpoint create` | **REFUTED** untuk keduanya — dua-duanya ditolak sebagai unknown flag | `generators/cli/schema/apply.js` (contract), `generators/cli/endpoint/create.js` (contract), `generators/lib/arg-parser.js:91-100` |
@@ -199,7 +199,7 @@ Handbook `restforge-handbook/commands/restforge-backend/project/sdk.md` mendafta
 kelima flag yang sama dengan status wajib/default yang sama. **Tidak ada drift.** Klaim
 issue #46 bahwa verb ini nyata dan layak di-wrap MCP terverifikasi tanpa catatan.
 
-### 3.6 Klaim 5 — `restforge-designer auth --attach`
+### 3.6 Klaim 5 — `npx restforge-designer auth --attach`
 
 `--attach` ada di source designer sebagai field `AuthArgs.attach`
 (`packages/designer/src/cli/mod.rs:156-201`), lengkap dengan validasi XOR tiga arah di

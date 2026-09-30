@@ -45,7 +45,7 @@ precondition §-style, fact block, annotations, guidance) dan ikuti konsisten.
    - Wrap `npx restforge-designer auth --attach --project=<project>` + opsional
      `--frontend-path`, `--api-base-url`, `--overwrite`.
    - Cermin struktur `auth-create.ts` (termasuk pre-flight probe
-     `restforge-designer --version` dan pola precondition), dengan deskripsi yang
+     `npx restforge-designer --version` dan pola precondition), dengan deskripsi yang
      menjelaskan beda attach vs create (retrofit ke frontend existing; rujuk
      `restforge-handbook/commands/restforge-frontend/auth.md`).
    - Deskripsi harus membantu agent memilih antara `designer_auth_create` dan tool
