@@ -481,7 +481,6 @@ Kutipan Kriteria Selesai:
 | Baris config schema di tabel Grounding-First | CONFIRMED | `SKILL.md:412` — baris `Setting db-connection.env parameters | setup_get_config_schema | references/config-schema.md` |
 | `rdf-advanced.md` punya grounding tool | CONFIRMED | Baris 16-17 tabel grounding (`codegen_get_field_validation_catalog`, `codegen_get_query_declarative_catalog`), dirujuk lagi di baris 73, 105, 131 |
 | README installer sesuai `cli/index.js` | CONFIRMED | `README.md:87-88,108` menyebut `./.mcp.json` untuk Claude Code, disertai penjelasan bahwa itu konvensi project-scope-nya dan bukan file di bawah `.claude/` |
-| Mirror plugin ter-sync | CONFIRMED | `diff -rq restforge-skills/skills/restforge packages/restforge-plugins/skills/restforge-skills` → tanpa selisih |
 
 **Verdict issue-49: CONFIRMED.**
 
@@ -533,7 +532,7 @@ Kutipan Kriteria Selesai:
 | 46 | Gap cakupan sdk/attach/license/consumer | **CONFIRMED** | 4 gap tertutup: 4 tool baru + catatan eksplisit `license deactivate`; `fast-track` dan `serve` juga beralasan |
 | 47 | Flag tidak diekspos, force hardcode | **PARTIAL** | Kriteria flag CONFIRMED penuh (butir `dbschema_init --force` terbantah dan terkoreksi); kriteria jalur non-overwrite PARTIAL karena salah lapor |
 | 48 | Handbook tanpa spec MCP | **CONFIRMED** | `mcp/` 10 file; audit dua arah 69=69 nol selisih |
-| 49 | restforge-skills 19 tool tanpa status | **CONFIRMED** | 69/69 tersebut; SKILL-ID sinkron; mirror plugin identik |
+| 49 | restforge-skills 19 tool tanpa status | **CONFIRMED** | 69/69 tersebut; SKILL-ID sinkron |
 | 50 | Deskripsi verb kolon lama | **CONFIRMED** | Scan 69 deskripsi nihil bentuk kolon; `query validate` terbukti hidup end-to-end |
 | 51 | Indeks command stale dan flag drift | **CONFIRMED** | 6/6 butir; 47 command; 0 `.report.md` |
 

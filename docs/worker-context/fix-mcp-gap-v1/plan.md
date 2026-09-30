@@ -51,8 +51,6 @@ Aturan global default section 8 skill mode-orchestrator berlaku, ditambah:
 4. Commit tanpa trailer co-author (aturan global user).
 5. Worker dilarang menjalankan `npm publish`/`npm login` (kebijakan user; publish
    ditangani user sendiri).
-6. `packages/restforge-plugins/skills/restforge-skills/` adalah mirror hasil generate
-   (`sync-to-plugin.bat`); jangan di-hand-edit.
 
 ## Keputusan Campaign (dari evaluasi phase 00)
 
@@ -85,7 +83,7 @@ Aturan global default section 8 skill mode-orchestrator berlaku, ditambah:
 | 02 | Ekspos flag yang hilang (`generate_payload`, `validate_config`, `create_endpoint`, `dbschema_init`) + jalur non-overwrite `create_endpoint` + peringatan destruktif pada deskripsi tool ber-hardcode | `packages/mcp-server` | 47 | 00 |
 | 03 | Tool baru: `project_sdk_generate`, `designer_auth_attach`, `license_info`; catat keputusan `license_deactivate` di SERVER_INSTRUCTIONS | `packages/mcp-server` | 46 (butir 1-3) | 00 |
 | 04 | Launcher consumer: perluasan `runtime_generate_launcher` atau tool baru untuk `restforge-consumer`/`restforge-consumer-deploy` | `packages/mcp-server` | 46 (butir 4) | 00, 03 |
-| 05 | Sinkronisasi restforge-skills: status 19 tool, tabel Grounding-First, `rdf-advanced.md`, `SKILL-ID.md`, README installer, jalankan sync-to-plugin | `restforge-skills` | 49 | 01-04 (agar tool baru ikut tercakup) |
+| 05 | Sinkronisasi restforge-skills: status 19 tool, tabel Grounding-First, `rdf-advanced.md`, `SKILL-ID.md`, README installer | `restforge-skills` | 49 | 01-04 (agar tool baru ikut tercakup) |
 | 06 | Handbook: bagian spec MCP (`restforge-handbook/mcp/`) — **GATE: konfirmasi user + keputusan branch handbook** | `restforge-handbook` | 48 | 01-04 |
 | 07 | Handbook: perbaikan indeks command + contoh flag salah — **GATE: konfirmasi user** | `restforge-handbook` | 51 | 00, 06 (branch sama) |
 | 08 | Acceptance: build + test mcp-server, smoke test tool baru/berubah terhadap project uji, cek silang kriteria selesai keenam issue | lintas repo | semua | 01-07 |
@@ -109,7 +107,7 @@ orchestrator, bukan worker.
 | 02g | Diterima | `prompts/phase-02g-sweep-payload-passthrough.md` | `reports/phase-02g-sweep-payload-passthrough.md` | `95eedde` | Audit membantah premis 02f: endpoint/processor kebal bug ekstensi (validatePayloadName normalisasi); diperbaiki schema/pre-flight/deskripsi yang tidak sinkron; kafka tanpa mismatch, tidak diubah. Catatan penutupan issue-45: butir 2 hanya jalur dashboard. Backlog: sweep payload Designer, penyeragaman konvensi payload platform. |
 | 03 | Diterima | `prompts/phase-03-tool-baru-sdk-attach-license.md` | `reports/phase-03-tool-baru-sdk-attach-license.md` | `0651ffc` | 68 tool terdaftar (harness McpServer asli); perilaku force SDK dari source; force tidak diekspos di auth attach (relevan --remove saja). Keputusan: plugins-dir → backlog; license deactivate final tidak di-wrap; project tenant → issue baru; phase 08 pakai playground segar. |
 | 04 | Diterima | `prompts/phase-04-consumer-launcher.md` | `reports/phase-04-consumer-launcher.md` | `b0c1f0f` | 69 tool; mode host tulis skrip `--flag=value`, mode pm2 delegasi consumer-deploy (prompt interaktif dihindari via pre-check + stdin ignore). Keputusan: koreksi handbook --config consumer → phase 07; check tool consumer/nama per-consumer/status consumer → backlog; phase 08 verifikasi pm2 saja. |
-| 05 | Diterima | `prompts/phase-05-sinkronisasi-restforge-skills.md` | `reports/phase-05-sinkronisasi-restforge-skills.md` | `77afc06` (restforge-skills) | 69/69 tool berstatus (64 alur, 5 eksplisit di luar); SKILL-ID sinkron; README `./.mcp.json`; mirror plugin identik. Follow-up penutupan: kalimat global-install mcp-server di Prerequisites kedua dokumen skill. |
+| 05 | Diterima | `prompts/phase-05-sinkronisasi-restforge-skills.md` | `reports/phase-05-sinkronisasi-restforge-skills.md` | `77afc06` (restforge-skills) | 69/69 tool berstatus (64 alur, 5 eksplisit di luar); SKILL-ID sinkron; README `./.mcp.json`. Follow-up penutupan: kalimat global-install mcp-server di Prerequisites kedua dokumen skill. |
 | 06 | Diterima | `prompts/phase-06-handbook-spec-mcp.md` | `reports/phase-06-handbook-spec-mcp.md` | `a074d31` (handbook) | mcp/ 10 file; audit dua arah 69=69 nol selisih; install lokal ditegakkan; dirty pra-existing utuh. Temuan → 06b (README mcp-server stale), phase 07 (+navigasi repo, data pull path, tautan commands→mcp). Backlog: penegakan angka 69. |
 | 06b | Diterima | `prompts/phase-06b-readme-mcp-server.md` | `reports/phase-06b-readme-mcp-server.md` | `89d7017` | README package sinkron 69 tool + koreksi klaim (Node>=18, sqlite, data_* license); global install hilang. Konfirmasi user saat penutupan: URL handbook publik, status publish create-restforge-skills. |
 | 07 | Diterima | `prompts/phase-07-handbook-koreksi-drift.md` | `reports/phase-07-handbook-koreksi-drift.md` | `0efc9f8` (handbook) | Butir A-E tuntas; hitungan 47 terverifikasi; layout data pull bersarang per schema (bukti source); 6 .report.md dihapus. Temuan → 07b (push.md), backlog (penegakan angka 47/9/69). |

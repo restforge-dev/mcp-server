@@ -32,8 +32,6 @@ Commit: `77afc06`.
 - [x] Butir 6 — `README.md`: lokasi MCP config project-scope Claude Code dikoreksi menjadi
       `./.mcp.json` sesuai `cli/index.js:44-48`; tabel "Where it installs" diperluas dengan baris
       scope project untuk kedua client.
-- [x] Butir 7 — `sync-to-plugin.bat` dijalankan; mirror
-      `packages/restforge-plugins/skills/restforge-skills/` terbarui dan tidak di-commit.
 
 ## 2. File yang Dibuat/Dimodifikasi
 
@@ -46,9 +44,6 @@ Seluruhnya di `restforge-skills/` (4 file, 489 insertion, 57 deletion):
 | `skills/restforge/references/rdf-advanced.md` | +50/-0. Tabel grounding tool di kepala file + 8 rujukan tool pada section yang relevan |
 | `README.md` | +17/-9. Paragraf `--scope=project`, baris contoh Options, dan tabel "Where it installs" (kini 4 baris: user/project × Claude Code/Cursor) plus catatan asimetri `./.mcp.json` |
 
-Mirror `packages/restforge-plugins/skills/restforge-skills/` diperbarui oleh robocopy
-(bukan bagian commit; folder itu paket lain).
-
 Tidak ada file lain yang disentuh: `references/auth.md`, `udf-catalog.md`,
 `dbschema-catalog.md`, `field-validation.md`, `design-to-sdf.md`, `config-schema.md`,
 `package.json`, `cli/`, dan `*.bat` tidak berubah.
@@ -57,20 +52,6 @@ Tidak ada file lain yang disentuh: `references/auth.md`, `udf-catalog.md`,
 
 Tidak ada test suite di repo ini (sesuai kontrak phase). Verifikasi berbentuk pemeriksaan
 silang, hasilnya di section 4.
-
-Satu-satunya eksekusi: `sync-to-plugin.bat`.
-
-```
-Source : D:\workspace\03_projects\restforge-systems\restforge-skills\skills\restforge
-Dest   : ...\packages\restforge-plugins\skills\restforge-skills
-               Total    Copied   Skipped  Mismatch    FAILED    Extras
-    Dirs :         2         0         2         0         0         0
-   Files :         8         3         5         0         0         0
-   Bytes :   128.4 k    63.5 k    64.9 k         0         0         0
-```
-
-`diff -r restforge-skills/skills/restforge packages/restforge-plugins/skills/restforge-skills`
-tidak menghasilkan output (mirror identik dengan sumber).
 
 ## 4. Verifikasi Mandiri
 
@@ -220,8 +201,7 @@ berhenti" (sebelumnya langkah 17 di kedua file).
 ```
 
 Hanya file scope. Branch `campaign/fix-mcp-gap-v1` (tidak berpindah), commit `77afc06` tanpa
-trailer co-author. Folder mirror di `packages/restforge-plugins/` berada di luar repo ini
-sehingga tidak muncul di status dan tidak ikut ter-commit.
+trailer co-author.
 
 ### 4.5 Konsistensi klaim vs kode
 
@@ -311,11 +291,7 @@ Setiap klaim perilaku baru ditelusuri ke source pada branch `campaign/fix-mcp-ga
    phase ini. Ambang minimum sebenarnya untuk `query validate` tetap belum diketahui, dan itu
    dinyatakan eksplisit di dokumen.
 
-3. **Mirror plugin belum di-review manusia.** robocopy melaporkan 3 file tersalin dan `diff -r`
-   menyatakan mirror identik dengan sumber, tetapi apakah repo `restforge-plugins` perlu commit
-   atau bump versi adalah keputusan di luar phase ini.
-
-4. **Nomor baris yang dikutip di section 4 mengacu pada working tree saat commit `77afc06`.**
+3. **Nomor baris yang dikutip di section 4 mengacu pada working tree saat commit `77afc06`.**
    Bila SKILL.md disunting lagi, nomornya bergeser; nama bab tetap menjadi rujukan yang stabil.
 
 ## 7. Pertanyaan untuk Orchestrator

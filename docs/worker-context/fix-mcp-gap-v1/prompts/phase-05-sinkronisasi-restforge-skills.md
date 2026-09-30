@@ -72,10 +72,6 @@ Semua di `restforge-skills/`:
    itu (bahasa Indonesia).
 6. **`README.md`:** koreksi tabel/teks lokasi instalasi MCP config project-scope
    Claude Code menjadi `./.mcp.json` sesuai perilaku `cli/index.js`.
-7. **Jalankan `sync-to-plugin.bat`** setelah semua revisi selesai, agar mirror
-   `packages/restforge-plugins/skills/restforge-skills/` terbarui. Perubahan mirror
-   TIDAK di-commit oleh worker (folder itu repo/paket lain; cukup laporkan hasil
-   robocopy).
 
 ## Aturan Implementasi
 
@@ -102,8 +98,7 @@ Tidak ada test suite. Verifikasi berbentuk pemeriksaan silang (bagian berikut).
    di tabel Grounding-First; `rdf-advanced.md` memuat nama tool grounding.
 3. Diff ringkas SKILL-ID.md vs SKILL.md: blok pipeline kini paralel (tunjukkan
    beberapa baris kunci, mis. langkah 1 create-restforge-app).
-4. Output `sync-to-plugin.bat` (ringkasan robocopy) + `git -C restforge-skills status`
-   sebelum commit: hanya file scope.
+4. Output `git -C restforge-skills status` sebelum commit: hanya file scope.
 5. Konsistensi klaim vs kode: setiap klaim perilaku baru yang kamu tulis harus cocok
    dengan source mcp-server branch campaign; sebutkan file rujukan untuk tiap klaim
    utama di report.
