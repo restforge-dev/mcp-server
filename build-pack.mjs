@@ -2,13 +2,13 @@
 /**
  * build-pack.mjs
  *
- * Helper script for build-final.bat. Performs:
+ * Helper script for build-release.bat. Performs:
  *   1. Bump version in package.json (based on flag)
  *   2. Run `npm run build` (TypeScript -> dist/)
  *   3. Run `npm pack` to create the tarball
  *   4. Move the tarball into dist-tarball/
  *
- * Invoked by build-final.bat with one of these flags:
+ * Invoked by build-release.bat with one of these flags:
  *   --nobump | --patch | --minor | --major | --beta | --stable | --minor-beta | --major-beta
  */
 
@@ -252,10 +252,10 @@ echo.
 echo [ERROR] Versi ${newVersion} sudah pernah di-publish ke registry.
 echo.
 echo Bump version dulu di folder source restforge-mcp dengan salah satu flag:
-echo   build-final.bat --patch     -- stable patch bump
-echo   build-final.bat --minor     -- stable minor bump
-echo   build-final.bat --beta      -- increment beta number
-echo   build-final.bat --stable    -- promote pre-release ke stable
+echo   build-release.bat --patch     -- stable patch bump
+echo   build-release.bat --minor     -- stable minor bump
+echo   build-release.bat --beta      -- increment beta number
+echo   build-release.bat --stable    -- promote pre-release ke stable
 echo.
 pause
 exit /b 1

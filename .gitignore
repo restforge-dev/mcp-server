@@ -142,5 +142,5 @@ eval-output/
 docs-developer/
 
 # Script build dan release internal
-build-final.bat
+build-release.bat
 git-release.bat
