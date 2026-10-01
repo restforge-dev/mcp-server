@@ -34,7 +34,11 @@ DO NOT USE FOR:
 - Generating a payload from scratch for a table that has no payload yet -> use 'codegen_generate_payload'
 - Cleaning up or deleting old '.archive.NNN' files — this tool does not handle archive cleanup; the user must remove archive files manually if desired
 
-This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd.
+CHECK CONSTRAINTS (schemaPath):
+- The CLI reads the schema definition files (SDF, default folder 'schema') and derives CHECK constraints into fieldValidation (enum, min, max, notEqual) plus the checkConstraints registry. A payload whose columns already match the database is still updated when these derived values are missing, and is reported as "CHECK constraints derived from SDF".
+- Pass 'schemaPath' only when the SDF lives somewhere other than the 'schema' folder. When no SDF is found, this derivation is skipped and existing values are kept.
+
+This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--schema-path=<path>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd.
 The CLI reads existing payload JSON files from the project payload/ directory, connects to the database described
 in the config file, and rewrites each payload file whose schema has drifted. Before overwriting, the
 previous file content is renamed to '<filename>.archive.NNN' (NNN is a sequential number starting at 001).
@@ -70,6 +74,11 @@ PRESENTATION GUIDANCE:
           .min(1)
           .optional()
           .describe('Specific table name to sync (e.g. supplier or core.supplier). When omitted, all payload files in the payload/ directory are synced.'),
+        schemaPath: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Schema definition (SDF) location, file or folder, used to derive CHECK constraints into the payload. Omit to use the CLI default ('schema')."),
         expandFk: z
           .enum(['both', 'datatables-only'])
           .optional()
@@ -91,7 +100,7 @@ PRESENTATION GUIDANCE:
         idempotentHint: false,  // memanggil ulang dapat menambah file archive baru jika DB berubah lagi di antara panggilan
       },
     },
-    async ({ cwd, config, table, expandFk, fkColumns, expandFkSkip }) => {
+    async ({ cwd, config, table, schemaPath, expandFk, fkColumns, expandFkSkip }) => {
       const projectCwd = resolve(cwd);
 
       // FK expansion requires a single-table target. Guard before touching the
@@ -171,6 +180,7 @@ For the assistant:
       // should remain in effect when the user does not specify them. per §3.5
       const args = ['restforge', 'payload', 'sync', `--config=${config}`];
       if (table) args.push(`--table=${table}`);
+      if (schemaPath) args.push(`--schema-path=${schemaPath}`);
       if (expandFk) {
         args.push(`--expand-fk=${expandFk}`);
         if (fkColumns) args.push(`--fk-columns=${fkColumns}`);

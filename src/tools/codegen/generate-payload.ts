@@ -30,7 +30,7 @@ mapped to hyphen). The payload file is the input for the next codegen step (proj
 
 Optional flags and when they matter:
 - 'output': write the payload somewhere other than the default 'payload/' folder. Note that the endpoint generator reads from 'payload/', so a custom output folder means the file has to be moved back before generating code.
-- 'schemaPath': location of the schema definition files (SDF). REQUIRED when the table has soft-delete columns (is_deleted / deleted_at / deleted_by): the softDelete block of the payload is derived from the SDF, and the CLI fails with an explicit error when the table has those columns but no matching SDF declaration. Ignored for tables without soft-delete columns.
+- 'schemaPath': location of the schema definition files (SDF). REQUIRED when the table has soft-delete columns (is_deleted / deleted_at / deleted_by): the softDelete block of the payload is derived from the SDF, and the CLI fails with an explicit error when the table has those columns but no matching SDF declaration. The SDF is also used to derive CHECK constraints into fieldValidation (enum, min, max, notEqual) and the checkConstraints registry; when no SDF is found, that derivation is skipped.
 - 'detail': name of the detail table for a master-detail (header-detail) pair. The payload then also gets a fully populated 'masterDetail' block plus a generated detail query file, and the composite actions are enabled. The detail table must have a foreign key referencing the master table's primary key. An existing 'masterDetail' block in the target file is preserved, not overwritten.
 
 Preconditions:
@@ -67,7 +67,7 @@ PRESENTATION GUIDANCE:
           .string()
           .min(1)
           .optional()
-          .describe("Schema definition (SDF) location, file or folder. Omit to use the CLI default ('schema'). Required to cover the table when it has soft-delete columns (is_deleted/deleted_at/deleted_by), because the softDelete block is derived from the SDF; ignored for tables without those columns."),
+          .describe("Schema definition (SDF) location, file or folder. Omit to use the CLI default ('schema'). Required to cover the table when it has soft-delete columns (is_deleted/deleted_at/deleted_by), because the softDelete block is derived from the SDF. Also used to derive CHECK constraints (enum, min, max, notEqual) into the payload."),
         detail: z
           .string()
           .min(1)
