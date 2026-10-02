@@ -16,7 +16,7 @@ USE WHEN:
 - Pertanyaan dalam bentuk: "bagaimana sintaks defineModel", "apa saja field type yang didukung", "bagaimana cara declare foreign key di schema", "constraint apa saja yang ada di shorthand"
 - The user mentions dbschema-kit concepts: \`defineModel\`, factory function, shorthand syntax, \`belongsTo\`/\`hasMany\`/\`hasOne\`, \`pk\`/\`fk:\`/\`unique\`, \`checks\`, \`primaryKey\`, \`relations\`, \`referentialActions\`, \`onDelete\`/\`onUpdate\`
 - Before authoring a schema file (via Write/Edit tools) — to ground field types, constraint syntax, and relation declarations
-- Before invoking 'codegen_dbschema_init' or 'codegen_dbschema_validate' — to verify the planned approach matches the API
+- Before writing a new schema file once its fields are settled with the user (or the user handed the design over) — request only the sections the file needs (e.g. section=fieldTypes, shorthandSyntax, auditColumns, relationTypes) instead of the full catalog, once per session
 - The user asks about referential actions: \`cascade\`, \`restrict\`, \`setNull\`, \`noAction\`
 - The user asks about check operations: \`in\`, \`gt\`, \`gte\`, \`lt\`, \`lte\`, \`eq\`, \`neq\`
 - The user asks about audit columns: \`created_at\`, \`created_by\`, \`updated_at\`, \`updated_by\` — the 4-column RESTForge convention shared between SDF and RDF. Trigger phrases: "audit columns", "kolom audit", "kolom created_by updated_by", "konvensi audit"

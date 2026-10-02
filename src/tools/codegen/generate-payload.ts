@@ -172,9 +172,10 @@ ${result.stdout}
 
 For the assistant:
 - Confirm to the user that the payload spec for the requested table is ready.
-- Mention in plain language that the payload is the input for the next codegen step (generating the project and endpoint code from this payload). That follow-up step is part of the CLI workflow but is not wrapped as a tool yet.
-- Suggest that the user can review or edit the generated payload file before the next step.
-- This output is a single-table skeleton. For a transactional module with a header-detail relationship or a status-driven lifecycle, the advanced blocks (master-detail, workflow, and the composite/workflow action keys) are NOT generated and must be added manually. Ground that manual edit in the RESTForge handbook (catalogs/rdf/master-detail.md, catalogs/rdf/workflow.md, catalogs/rdf/file-reference.md) rather than guessing the structure; for the 'file:' query convention, the query declarative catalog applies. Only raise this when the user's intent points to such a module.
+- The next steps are validating this payload ('codegen_validate_payload') and then generating the endpoint module from it ('codegen_create_endpoint'). When the user's request already covers the endpoint, continue with those steps instead of stopping here.
+${detail
+  ? `- The masterDetail block, the detail query file, and the composite actions were generated from '${detail}'. Only the 'headerCalculations' and 'calculated' formulas are filled in by hand, grounded in the RESTForge handbook (catalogs/rdf/master-detail.md).`
+  : `- For a header-detail module, re-run this tool with 'detail' set to the detail table instead of writing masterDetail by hand. A status-driven lifecycle ('workflow' block and its action key) is not generated and is added manually, grounded in the RESTForge handbook (catalogs/rdf/workflow.md). Only raise this when the user's intent points to such a module.`}
 - Keep the reply concise. Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names.`,
           },
         ],

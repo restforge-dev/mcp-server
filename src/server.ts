@@ -67,10 +67,11 @@ exists too, but it actively connects to the database and license server, so
 reserve it for explicit validation requests, not initial inspection.)
 
 Do not silently fall back to generic file/bash operations for the categories
-above. If a request requires an operation outside these tools' scope (e.g.
-DDL changes — see LAYER BOUNDARY below; running, stopping, or restarting the
-server — see RUNTIME LIFECYCLE BOUNDARY below), state that explicitly to the
-user before proceeding.
+above. Authoring or editing an SDF file (schema/<table>.js) with the file
+tools is the intended path, not a fallback — no tool knows the user's fields.
+If a request requires an operation outside these tools' scope (e.g. running,
+stopping, or restarting the server — see RUNTIME LIFECYCLE BOUNDARY below),
+state that explicitly to the user before proceeding.
 
 NEW PROJECT SCAFFOLDING:
 The dominant way a human creates a new RESTForge project is the one-shot
@@ -128,17 +129,23 @@ resort. Default behaviour: refuse Bash-based start and route through the
 runtime_* tools.
 
 LAYER BOUNDARY:
-The codegen and setup tools manage application-layer behavior in payload JSON
-files and generated model code. They do NOT modify database DDL (tables,
-columns, indexes, foreign keys, CHECK constraints, UNIQUE constraints).
+Two layers describe a field, and they are changed through different files:
+  - Database layer (SDF): tables, columns, indexes, foreign keys, CHECK and
+    UNIQUE constraints live in schema/<table>.js. They reach the database
+    through codegen_dbschema_validate, then codegen_dbschema_migrate (empty
+    database) or codegen_dbschema_diff -> codegen_dbschema_apply (existing
+    database).
+  - Application layer (RDF): fieldValidation in payload/<name>.json.
 
 When the user uses SQL DDL terminology — NOT NULL, UNIQUE, CHECK, REFERENCES,
 ALTER TABLE, CREATE INDEX, DEFAULT (in DDL context) — do not automatically map
 to payload validation. Clarify which layer the user wants:
   (a) Application-layer validation in payload (e.g. required, unique, min,
-      maxLength, pattern, enum) — handled by these tools
-  (b) Database-level DDL changes — out of scope; suggest direct SQL or a
-      migration tool
+      maxLength, pattern, enum) — edit the RDF payload
+  (b) Database-level enforcement — edit the SDF, then validate and apply it.
+      Changes apply cannot perform (type, PK, default, or CHECK changes on an
+      existing column) are reported by the tool; suggest a manual SQL
+      migration only for those.
 
 Both layers can co-exist for the same field. They serve different purposes:
 DDL enforces at storage level (rejects with database error); payload validation
@@ -176,8 +183,19 @@ route them as follows:
   Example: <frontend-project>/payload/01-category.json
 
 Routing for SDF requests:
-- create / init / scaffold -> codegen_dbschema_init
-- browse/preview/generate schema templates (87-template reference collection) -> codegen_dbschema_template
+- create a new table (e.g. "buatkan tabel product") -> NOT a tool call first.
+  If the user did not state the fields and their types, ask for them in one
+  short message and mention the user may leave the design to the assistant;
+  write nothing while waiting. Once the fields are stated, or the user hands
+  the design over ("terserah", "tentukan sendiri"), ground the syntax with
+  codegen_get_dbschema_catalog (only the needed sections), write the complete
+  schema/<table>.js with the RESTForge conventions (snake_case singular table,
+  PK <table>_id string:36 pk, FK named after the target PK, the 4 audit
+  columns), then codegen_dbschema_validate.
+- explicit draft / initial / skeleton file ("draft table", "inisial table",
+  "skeleton schema") -> codegen_dbschema_init (generic dummy template only;
+  never as a first step for a real table)
+- explicitly browse/preview/generate a ready-made schema template (87-template reference collection) -> codegen_dbschema_template
 - validate -> codegen_dbschema_validate
 - list models / show structural summary -> codegen_dbschema_models
 - generate DDL (preview or to file) -> codegen_dbschema_generate_ddl
@@ -202,36 +220,17 @@ Routing for RDF requests:
 - generate endpoint module from RDF -> codegen_create_endpoint
 - lookup field validation spec -> codegen_get_field_validation_catalog
 - lookup query declarative spec -> codegen_get_query_declarative_catalog
-- advanced RDF structure (master-detail / header-detail / composite
-  create-update-read / workflow / state machine) -> codegen_generate_payload
-  produces only the single-table skeleton; the advanced blocks are then added
-  manually with handbook grounding. See ADVANCED RDF STRUCTURES below.
+- master-detail / header-detail / composite create-update-read ->
+  codegen_generate_payload with 'detail' (writes masterDetail and the
+  composite actions); workflow / state machine -> added manually with
+  handbook grounding. See ADVANCED RDF STRUCTURES below.
 
-UDF authoring and generation belongs to the frontend generator toolchain,
-which is a separate workflow from this MCP server. This server currently
-covers the SDF (database) layer and the RDF (backend API) layer; the UDF
-layer is handled by the frontend project's own generator. When the user
-asks about UDF — e.g. "generate UDF for category", "scaffold UI from
-payload", "buatkan UDF untuk halaman X" — recognise UDF as a valid
-first-class concept in the ecosystem and respond constructively:
-
-  1. Confirm in plain language that you understood the UDF intent (e.g.
-     "you want to generate the frontend UI definition for category").
-  2. Explain helpfully that the UDF generation step lives in the frontend
-     project and is run by its dedicated generator, separate from this
-     server's surface.
-  3. Suggest concrete next steps in the user's frontend project: locate
-     the payload/NN-<name>.json file, run the frontend generator there,
-     and verify the generated output.
-  4. Offer continued assistance for the SDF and RDF layers (which this
-     server DOES cover) — for example, you can still help draft the
-     underlying RDF that the frontend will consume.
-
-Tone guidance: frame UDF support as "this stage lives in another part of
-the workflow" rather than "this is unsupported" or "I cannot help". UDF
-is recognised as a legitimate ecosystem concept; the assistant should
-sound informed and forward-looking, not dismissive. Match the user's
-language.
+Routing for UDF requests ("generate UDF for category", "buatkan UDF untuk
+halaman X", "generate frontend"): this server covers the UDF layer too.
+Follow the canonical UDF flow in DESIGNER (FRONTEND) DOMAIN below —
+codegen_migrate_payload first when a backend RDF exists, then
+designer_get_udf_catalog -> designer_validate_payload ->
+designer_preview_files -> designer_generate.
 
 The three layers serve different purposes and co-exist in the same ecosystem:
 SDF defines database structure, RDF defines backend API behavior on that
@@ -242,9 +241,14 @@ mean before invoking any tool.
 
 KNOWLEDGE BOUNDARY:
 This MCP server provides structured catalog data for SPECIFIC RESTForge
-features that AI agents commonly need for grounding (currently:
-field-validation, query-declarative). It does NOT provide complete
-documentation coverage for every RESTForge feature.
+features that AI agents commonly need for grounding (currently: dbschema,
+field-validation, query-declarative, dashboard, and the designer UDF
+catalog). It does NOT provide complete documentation coverage for every
+RESTForge feature.
+
+This boundary covers RESTForge syntax and behavior. It does not stop the
+assistant from choosing the business fields of a table when the user has
+handed that design over; see the SDF routing above.
 
 When the user asks about RESTForge behavior, syntax, or configuration
 that is NOT covered by an available catalog tool:
@@ -268,24 +272,25 @@ the catalog data over the URL for property reference, but use the URL
 for use case examples and decision guides.
 
 ADVANCED RDF STRUCTURES (master-detail, workflow, composite actions):
-'codegen_generate_payload' introspects a single table and produces a
-single-table RDF skeleton only. That skeleton already includes:
-tableName, primaryKey, fieldName, fieldValidation, uniqueConstraints, a
-'datatablesQuery' written as a 'file:query/<table>-datatables.sql'
-reference (with the .sql file emitted alongside), a 'datatablesWhere'
-listing the table's own string columns plus "all", the seven basic
-action keys (datatables, create, update, delete, first, lookup, read),
-and 'defaultScope' when an is_active column exists.
+'codegen_generate_payload' introspects a table and produces its RDF. The
+output always includes: tableName, primaryKey, fieldName, fieldValidation,
+uniqueConstraints, a 'datatablesQuery' written as a
+'file:query/<table>-datatables.sql' reference (with the .sql file emitted
+alongside), a 'datatablesWhere' listing the table's own string columns plus
+"all", the seven basic action keys (datatables, create, update, delete,
+first, lookup, read), and 'defaultScope' when an is_active column exists.
 
-The generator does NOT produce these advanced blocks — they must be
-authored manually after generation:
-- 'masterDetail' (the full header-detail structure: detailTable,
-  foreignKey, detailConfig, headerCalculations, cascadeDelete,
-  transactionMode, etc.)
-- 'workflow' (the state machine: statusField, transitions, hooks)
-- the composite action keys 'createComposite', 'updateComposite',
-  'readComposite', and 'workflow' inside the 'action' block (the
-  generator writes only the seven basic keys; these are never emitted)
+Master-detail is generated, not hand-written: pass 'detail' (the detail
+table name) to 'codegen_generate_payload'. It writes the 'masterDetail'
+block (foreignKey, cascadeDelete, detailConfig with requiredFields and
+autoCalculateFields), the detail query file, and the composite action keys
+'createComposite', 'updateComposite', 'readComposite'. Only the formulas
+('headerCalculations', 'calculated') are filled in by hand afterwards.
+
+The generator does NOT produce these blocks — they are authored manually
+after generation:
+- 'workflow' (the state machine: statusField, transitions, hooks) and the
+  'workflow' key inside the 'action' block
 - join columns in 'datatablesWhere' that come from a joined table (the
   generator only lists the base table's own columns)
 
@@ -298,8 +303,8 @@ BOUNDARY above):
   'datatablesQuery' is ALREADY emitted as a 'file:' reference by the
   generator — do not re-add it manually; the catalog applies only to
   additional advanced queries you author.
-- For 'masterDetail', 'workflow', and the composite/workflow action
-  semantics there is NO live catalog. Consult the canonical RESTForge
+- For 'workflow', the 'headerCalculations' / 'calculated' formulas, and
+  other masterDetail tuning there is NO live catalog. Consult the canonical RESTForge
   handbook: 'catalogs/rdf/master-detail.md', 'catalogs/rdf/workflow.md',
   and 'catalogs/rdf/file-reference.md'.
 - Join columns from a referenced table (e.g. surfacing supplier_name /

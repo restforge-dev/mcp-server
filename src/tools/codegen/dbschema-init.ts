@@ -9,19 +9,14 @@ export function registerCodegenDbschemaInit(server: McpServer): void {
     'codegen_dbschema_init',
     {
       title: 'Init dbschema-kit Skeleton File',
-      description: `Create a new schema definition skeleton file at the given path, by wrapping restforge schema init. The generated file uses the factory function pattern with a minimal starter (id, code, name, is_active fields). The user is expected to edit the file afterwards to add the real domain fields, indexes, uniques, and relations.
+      description: `Create a DRAFT schema definition file at the given path, by wrapping restforge schema init. The file holds the generic 'dummy' template: a dummy_id primary key, one sample column per field type (field_string, field_text, field_integer, field_bigint, field_decimal, field_boolean, field_date, field_timestamp, field_uuid, field_json), and the audit columns. It contains no domain fields; the user edits it by hand afterwards.
 
-USE WHEN:
-- The user asks to create a new schema file, schema skeleton, or defineModel template
-- Pertanyaan dalam bentuk: "buatkan file schema untuk tabel X", "init schema definition", "create dbschema skeleton", "buat starter file schema"
-- Before any schema-as-code workflow when no schema files exist yet
-- The user wants to start declarative schema definition from scratch
-- The user asks for a starter template they can edit
-- After 'codegen_get_dbschema_catalog' grounding and the user is ready to author
-- The user mentions a new domain entity (e.g. "I need a customer_invoice table") and wants a schema file as a starting point
+USE ONLY WHEN the user explicitly asks for a draft, initial, or skeleton file:
+- "draft table", "draft schema", "inisial table", "file schema awal", "skeleton schema", "init schema definition", "starter file untuk saya isi sendiri"
 
 DO NOT USE FOR:
-- Scaffolding a real, fleshed-out common table (sales_order, invoice, product, ...) from the reference collection -> use 'codegen_dbschema_template' (generate mode); this tool only creates a minimal dummy skeleton
+- A request to create a real table ("buatkan tabel product", "create a customer table", "I need a customer_invoice table") -> this is NOT a draft request. If the fields and types are not stated, ask the user for them first (one short question; the user may leave the design to the assistant). Then ground the syntax with 'codegen_get_dbschema_catalog', write the complete schema/<table>.js with the file tools, and run 'codegen_dbschema_validate'. Never call this tool as a first step before authoring a real table.
+- A ready-made template from the reference collection (sales_order, invoice, product, ...) on explicit request -> use 'codegen_dbschema_template'
 - Editing an existing schema file -> use Edit/Write tools directly
 - Generating schema files from a live database -> use 'codegen_dbschema_introspect'
 - Creating a CRUD payload (different concept) -> use 'codegen_generate_payload'
@@ -35,8 +30,6 @@ There is no overwrite option here: '--schema-path' is the only flag the CLI acce
 
 IMPLEMENTATION NOTE (matters for cross-platform behaviour): schema init is a thin wrapper over 'schema template --table=dummy --generate --lang=sdf'. It therefore depends on the same native binary (sdf-tools.exe) that the template feature uses, and that binary is currently WINDOWS-ONLY. On a non-Windows host (or if the binary is missing from the installed package) the CLI exits with code 3 and no file is created — that is a platform limitation, not a user error.
 
-For scaffolding a real, fleshed-out table from the reference collection (e.g. sales_order, customer_invoice) instead of the minimal dummy skeleton, use 'codegen_dbschema_template' (generate mode).
-
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The init feature requires the Windows-only sdf-tools.exe binary shipped with the package (exit 3 otherwise — see IMPLEMENTATION NOTE).
@@ -46,8 +39,8 @@ Preconditions:
 PRESENTATION GUIDANCE:
 - Match the user's language. If the user writes in Indonesian, respond in Indonesian.
 - Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "create a starter schema file", "look up the schema catalog", "validate the schema").
-- Speak in plain language. Confirm the file was created, mention the file path and the derived table name; do not paste the raw CLI output unless the user explicitly asks.
-- The skeleton is intentionally minimal — only id, code, name, is_active fields. The user will need to edit it for their actual domain.
+- Speak in plain language. Confirm the file was created and mention its path; do not paste the raw CLI output unless the user explicitly asks.
+- The draft holds only the generic dummy columns. Tell the user to rename the table and replace the sample columns with the real domain fields.
 - If the user wants multiple files (e.g. category.js, supplier.js, customer.js), invoke this action once per file. Do not assume one call covers multiple files.
 - When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
       inputSchema: {
@@ -144,31 +137,24 @@ For the assistant:
         };
       }
 
-      // Derive the table name from filename (CLI applies the same rule).
-      // This is informational only — the labeled fact mirrors what the CLI will print to stdout.
-      const lastSegment = schemaPath.split(/[/\\]/).pop() ?? schemaPath;
-      const derivedTableName = lastSegment.endsWith('.js')
-        ? lastSegment.slice(0, -3)
-        : lastSegment;
-
       // Branch B: success — labeled facts + fenced raw output per §3.5.
       return {
         content: [
           {
             type: 'text',
-            text: `Schema skeleton file created successfully.
+            text: `Schema draft file created successfully.
 
 Project path: ${projectCwd}
 Target file: ${schemaPath}
-Table name (derived from filename): ${derivedTableName}
+Table name in the file: dummy (the CLI does not rename it after the file name)
 
 --- CLI output ---
 ${result.stdout}
 --- end CLI output ---
 
 For the assistant:
-- Confirm to the user that the skeleton file was created. Mention the file path and the derived table name in plain language.
-- The skeleton is a starting point only: it has minimal fields (id, code, name, is_active). Suggest opening the file and adding the actual fields, indexes, uniques, and relations that match the user's domain.
+- Confirm to the user that the draft file was created and mention its path in plain language.
+- The draft holds the generic dummy template (dummy_id, one sample column per field type, audit columns), not domain fields. Tell the user to rename the table and replace the sample columns with the real fields, indexes, uniques, and relations.
 - Use the schema catalog as ground truth when helping the user fill in the model (field types, constraints, relations, shorthand syntax).
 - After the user edits the file, suggest validating the schema next as a sanity check (without mentioning the internal tool name).
 - If the user wants several entities, this action creates one file per call. For multiple entities, invoke once per file.

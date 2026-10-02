@@ -56,7 +56,7 @@ export function registerCodegenDbschemaTemplate(server: McpServer): void {
     'codegen_dbschema_template',
     {
       title: 'Browse / Preview / Generate Schema Templates',
-      description: `Access the RESTForge Schema Reference collection (87 ready-made templates spanning 30+ domains: ERP, finance, inventory, e-commerce, CRM, HR, POS, and more) by wrapping restforge schema template. Use it to browse and filter the catalog, preview a template's SDF or SQL, look up the available domains/categories/sections, and scaffold real schema files for common business tables (e.g. sales_order, inventory, customer_invoice) instead of starting from an empty skeleton.
+      description: `Access the RESTForge Schema Reference collection (87 ready-made templates spanning 30+ domains: ERP, finance, inventory, e-commerce, CRM, HR, POS, and more) by wrapping restforge schema template. Use it to browse and filter the catalog, preview a template's SDF or SQL, look up the available domains/categories/sections, and scaffold schema files for common business tables (e.g. sales_order, inventory, customer_invoice) when the user asks for a template.
 
 FOUR MODES:
 - LIST / BROWSE (default, no show/generate/utility flag): returns a filtered catalog of templates. Combine filters: domain (csv), table (wildcard glob like "sales*"), category, pattern, section, hasSdf, noSdf.
@@ -66,15 +66,15 @@ FOUR MODES:
 
 PLATFORM DEPENDENCY (important): this feature is backed by a native binary (sdf-tools.exe) that is currently WINDOWS-ONLY. On a non-Windows host, or if the binary is missing from the installed package, the CLI exits with code 3 and this tool reports that the template collection is unavailable on this platform — that is NOT a user error. In that case, author the SDF by hand (ground it with 'codegen_get_dbschema_catalog') or reverse-engineer it from an existing database with 'codegen_dbschema_introspect'.
 
-USE WHEN:
-- The user asks for an example schema, a starter for a common table, or "what tables/templates are available"
+USE WHEN the user explicitly asks for the template collection:
+- The user asks for an example schema, a ready-made template, or "what tables/templates are available"
 - Pertanyaan dalam bentuk: "ada template schema untuk sales order nggak?", "buatkan schema inventory dari template", "contoh schema invoice", "template apa saja untuk domain ERP", "scaffold tabel pelanggan dari contoh"
-- The user wants to scaffold a real, fleshed-out table (sales_order, product, customer, journal_entry, ...) rather than the minimal id/code/name/is_active skeleton from 'codegen_dbschema_init'
 - Exploring the catalog by domain/category/pattern, or doing SDF gap analysis (noSdf=true)
 - The user wants to preview a template's SDF or SQL before committing it to a file
 
 DO NOT USE FOR:
-- Creating a minimal empty starter file (id/code/name/is_active only) -> use 'codegen_dbschema_init'
+- A plain request to create a table ("buatkan tabel product", "create a customer table") that does not mention a template or example -> ask the user for the fields and types when they are not stated (the user may leave the design to the assistant), then write schema/<table>.js with the file tools, grounded by 'codegen_get_dbschema_catalog'. Do not substitute a reference template for the user's own structure.
+- An explicit draft / skeleton file request ("draft table", "inisial table") -> use 'codegen_dbschema_init'
 - Editing an existing schema file -> use Edit/Write tools directly
 - Reverse-engineering SDF from a live database -> use 'codegen_dbschema_introspect'
 - Validating a schema file -> use 'codegen_dbschema_validate'
