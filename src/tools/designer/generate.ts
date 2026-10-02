@@ -26,6 +26,12 @@ This tool wraps the RESTForge Designer CLI command: npx restforge-designer gener
 The --payload and --output flags are always sent so the binary never drops into interactive prompt mode. Optional flags (plugin override, overwrite, scope, page, skip shared, plugins dir) are forwarded only when supplied; the binary defaults to scope 'app' when --scope is omitted.
 The recommended flow is read-before-write (§5.3): validate the payload, then preview the files, then generate.
 
+Re-generate behavior (existing output):
+- Without overwrite, existing files are merged three-way against the snapshot of the last generate (stored in <output parent>/.meta/<output folder>/). User customizations are kept and UDF changes on untouched lines are applied, for scope 'app' and 'form' alike.
+- A file whose edits clash with the new output is left untouched; the version with conflict markers goes to .meta/<app>/conflicts/<path> and the command exits 1 after all other files are processed.
+- Modified assets (CSS, vendor bundles, images) are kept with a warning. Files from an app generated before snapshots existed are kept when they differ, with the new version in conflicts/.
+- overwrite=true recreates every file from scratch; each existing file that differs is archived first. index.html without the RESTForge-Designer:LandingGenerated marker is never replaced and is reported as skipped.
+
 Cross-reference (grounding & on-ramp):
 - Before authoring or generating from a UDF, ground its shape (valid field types, required appConfig fields, enums, limits) against the designer's own rules via 'designer_get_udf_catalog' — the authoritative source of UDF structure.
 - If no UDF payload exists yet but the user has a backend RDF, the on-ramp is 'codegen_migrate_payload' (RDF -> split UDF set); validate and preview it before generating.
@@ -55,7 +61,7 @@ Preconditions:
         overwrite: z
           .boolean()
           .optional()
-          .describe('When true, overwrite existing files in the output directory.'),
+          .describe('When true, recreate existing files from scratch instead of merging them (differing files are archived first). Leave unset for a normal re-generate, which keeps user customizations.'),
         scope: z
           .enum(['app', 'form'])
           .optional()
@@ -77,7 +83,7 @@ Preconditions:
       },
       annotations: {
         title: 'Generate Designer Frontend',
-        destructiveHint: false, // writes generated files; overwrites only when overwrite=true is supplied
+        destructiveHint: false, // merges into existing files; recreates them (with archive) only when overwrite=true
         idempotentHint: false,  // each call regenerates files
       },
     },
@@ -140,6 +146,37 @@ For the assistant:
         timeout: 120_000,
       });
 
+      // Issue #118: exit 1 with a conflict list means every file was processed and only
+      // the listed files were left untouched for the user to resolve — not a failure.
+      if (result.exitCode === 1 && result.stdout.includes('Conflicts (file kept as-is):')) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Frontend code generated with merge conflicts.
+
+Working directory: ${projectCwd}
+Payload: ${payload}
+Output: ${output}
+Scope: ${scope ?? 'app (default)'}
+Command: ${result.command}
+Exit code: ${result.exitCode}
+
+--- stdout ---
+${result.stdout}
+--- end stdout ---
+
+For the assistant:
+- All other files were generated or merged. The files listed under "Conflicts" were left exactly as they were, because the user's edits overlap the new generator output.
+- For each conflicting file, the version with conflict markers (<<<<<<< current / ======= / >>>>>>> generated) is in the path shown after "->". Explain this to the user and offer to resolve it: apply the intended result to the file in the app folder, then run generate again (without overwrite) to confirm it finishes cleanly.
+- Do not suggest overwrite as the default fix: it discards the user's customizations in every file (they are archived, not merged).
+- Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names. Match the user's language.`,
+            },
+          ],
+          isError: false,
+        };
+      }
+
       // D9: write tool. A non-zero exit (incl. -1 crash/timeout) means generation did not
       // complete cleanly — files may be missing or partial, so the model needs to recover
       // -> isError: true.
@@ -171,7 +208,6 @@ For the assistant:
   * The payload relies on 'extends' / 'include' references — soft note: if the same payload passes validation but generation fails with an appConfig/plugin error (e.g. the plugin or app config "not found"), the payload may use 'extends' / 'include' that generate does not appear to merge the way validation does. As a possible workaround, suggest a self-contained payload (inline appConfig and pages) or an already-merged file. This is a tentative hint, not a guaranteed rule — do not state it as certain or tie it to a specific version.
   * The payload file path is wrong / the file was not found — suggest checking the path.
   * The plugin id in the payload (or the plugins directory) could not be resolved — suggest listing the available plugins.
-  * The output directory already exists and overwrite was not enabled — suggest retrying with overwrite, or choosing a different output path.
   * Exit code -1 — the command crashed or timed out; offer to retry.
 - Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names. Match the user's language.`,
             },
@@ -204,7 +240,8 @@ ${result.stdout}
 ${stderrBlock}
 For the assistant:
 - Confirm to the user that the frontend code was generated. Mention the output location and the scope (whole app, or a single page/form) in plain language.
-- Summarise what was produced from the CLI output (how many files, what kind) rather than pasting it.
+- Summarise what was produced from the CLI output (how many files, what kind) rather than pasting it. Each file has a status: written, merged (user edits kept, new output applied), unchanged, kept, or skipped.
+- If there are warnings about kept files (modified assets, or files without a snapshot), tell the user the new version is in the .meta conflicts folder shown in the warning.
 - Suggest a sensible next step, e.g. running or inspecting the generated frontend.
 - Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names. Match the user's language.`,
           },
