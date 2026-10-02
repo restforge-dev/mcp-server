@@ -68,12 +68,8 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The named processor payload JSON must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json). This tool pre-checks it using the same resolution the CLI applies: the '.json' extension is optional in the parameter, the name is lowercased, and path forms are rejected.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "generate the processor", "regenerate the routing").
-- Speak in plain language; summarise the result. Do not paste raw CLI output unless the user explicitly asks.
-- If the user wants to overwrite existing custom implementation, warn that without archiving they would lose hand-written logic; 'force' archives the old file before overwriting.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- If the user wants to overwrite existing custom implementation, warn that without archiving they would lose hand-written logic; 'force' archives the old file before overwriting.`,
       inputSchema: {
         cwd: z
           .string()

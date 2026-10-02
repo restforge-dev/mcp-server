@@ -35,16 +35,12 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The schema path must exist and contain valid schema files. If the CLI fails, the failure response surfaces the underlying cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "generate the DDL", "preview the SQL", "apply the schema").
-- Speak in plain language. Summarise the result (dialect, output target, drop mode); do not paste raw DDL unless the user explicitly asks.
+NOTES:
 - Output is dialect-aware: column types, FK syntax, default value translation, and identifier quoting all change per dialect. Do not assume cross-dialect equivalence.
 - The order is topological — parent tables before child tables. DROP order is reversed.
 - For preview before applying, this is the safe path. To actually apply, suggest the migrate action next.
 - When 'output' is set, the file is written; if it exists, it is overwritten. Confirm with the user if a destructive overwrite is intended.
-- If the user wants multi-dialect output, suggest invoking once per dialect.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- If the user wants multi-dialect output, suggest invoking once per dialect.`,
       inputSchema: {
         cwd: z
           .string()

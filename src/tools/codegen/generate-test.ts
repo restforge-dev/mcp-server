@@ -27,12 +27,8 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The named endpoint must already exist in the project. This tool does not pre-check it — if the CLI fails, the failure response surfaces the cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "generate the integration test").
-- Speak in plain language; summarise the result. Do not paste raw CLI output unless the user explicitly asks.
-- On the first test for a project, suggest using 'init' to set up the Jest test-data configuration.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- On the first test for a project, suggest using 'init' to set up the Jest test-data configuration.`,
       inputSchema: {
         cwd: z
           .string()

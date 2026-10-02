@@ -83,11 +83,6 @@ export function registerCodegenDbschemaDiff(server: McpServer): void {
       title: 'Diff dbschema-kit Files Against Database',
       description: `Detect schema drift between dbschema-kit SDF files and the live database structure (read-only, bidirectional), by wrapping restforge schema diff. The CLI loads the SDF files, introspects the matching tables in the database, and reports differences in both directions: only-in-SDF (declared but missing in the database), only-in-DB (present in the database but not declared), and mismatched (present on both sides but different). Nothing is written to the database or the filesystem.
 
-EXIT CODE SEMANTICS (important):
-- Exit 0 = no drift; schema and database are in sync.
-- Exit 1 = drift detected. This is a NORMAL, meaningful result — NOT a failure. The response summarises the drift; treat it as the answer to "is my schema in sync?".
-- Exit 2 = system error (invalid config, connection failure, schema path not found, SDF load error).
-
 USE WHEN:
 - The user asks "is my schema in sync with the database?", "apakah schema saya sinkron dengan database?", "ada drift nggak?", "cek drift schema"
 - After editing SDF files — to check the impact against the live database before deciding what to apply
@@ -104,6 +99,11 @@ DO NOT USE FOR:
 - Listing tables or describing a single table -> use 'codegen_list_tables' / 'codegen_describe_table'
 - Comparing RDF payload files against the database -> use 'codegen_diff_payload'
 
+EXIT CODE SEMANTICS (important):
+- Exit 0 = no drift; schema and database are in sync.
+- Exit 1 = drift detected. This is a NORMAL, meaningful result — NOT a failure. The response summarises the drift; treat it as the answer to "is my schema in sync?".
+- Exit 2 = system error (invalid config, connection failure, schema path not found, SDF load error).
+
 This tool runs: npx restforge schema diff --schema-path=<path> --config=<config> --json [--table=<name>] in the given cwd. The --json flag is always sent; the tool parses the JSON drift report (version, summary, per-table sections).
 
 Soft-delete note: the diff is soft-delete aware but non-strict. Drift in the softDelete block is reported as-is in the table's softDelete section without blocking the diff — unlike introspect, which can block on a broken soft-delete contract.
@@ -117,13 +117,9 @@ Preconditions:
 - The config file (default 'db-connection.env') must exist and contain valid database credentials.
 - SDF files must exist at the given path. The --schema-path flag is required by the CLI.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "compare the schema with the database", "check for drift").
+NOTES:
 - Drift detected is NOT an error. Present it as a factual comparison result: which tables drifted and in which direction (only-in-SDF / only-in-DB / mismatched).
-- Speak in plain language. Summarise per table; do not paste the raw JSON unless the user explicitly asks.
-- This is a read-only live comparison: the database is introspected at diff time and never modified.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- This is a read-only live comparison: the database is introspected at diff time and never modified.`,
       inputSchema: {
         cwd: z
           .string()

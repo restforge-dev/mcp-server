@@ -25,12 +25,9 @@ DO NOT USE FOR:
 Preconditions:
 - The 'src/modules/' folder must exist at <cwd>/src/modules/. If missing, the precondition response will say so.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
+NOTES:
 - When exactly one project is found, proceed without asking. When multiple are found, ask the user to pick one before generating the launcher.
-- The project name comes from the filename in src/modules/ (without the .js extension); explain this in plain language if asked.
-- When a precondition is not met (folder missing), frame it as a question or next-step suggestion rather than an error.`,
+- The project name comes from the filename in src/modules/ (without the .js extension); explain this in plain language if asked.`,
       inputSchema: {
         cwd: z
           .string()

@@ -9,43 +9,23 @@ export function registerCodegenGetDbschemaCatalog(server: McpServer): void {
     'codegen_get_dbschema_catalog',
     {
       title: 'Get dbschema-kit Catalog',
-      description: `Get authoritative JSON catalog of the dbschema-kit defineModel API: defineModel options, field types (with modifier formats), constraints (standalone vs value-bearing), relation types (belongsTo, hasMany, hasOne), referential actions (cascade/restrict/setNull/noAction), check operations (in/gt/gte/lt/lte/eq/neq), audit columns, soft-delete contract, shorthand syntax rules and examples, naming rules (table/constraint), and dialect support (postgres/mysql/oracle/sqlite). The catalog is the single source of truth for schema-as-code authoring. The softDelete section documents the SDF soft-delete contract: the three contract columns (is_deleted/deleted_at/deleted_by, biconditional with softDelete.enabled), the reusable unique-column rules (string/text + single-column UNIQUE + physical length >= base length + 38), the UNIQUE eligibility gate (composite and non-string UNIQUEs are rejected), the emitted DDL (consistency CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes), and dialect support (Phase 1: PostgreSQL only).
+      description: `Get the authoritative JSON catalog of the dbschema-kit defineModel API (the SDF syntax): defineModel options, field types and modifiers, constraints, relations (belongsTo, hasMany, hasOne), referential actions, check operations, audit columns, the soft-delete contract, shorthand syntax, naming rules, and dialect support (postgres/mysql/oracle/sqlite).
 
 USE WHEN:
-- The user asks how to define a database schema with dbschema-kit, the factory function pattern, or the \`defineModel\` API
-- Pertanyaan dalam bentuk: "bagaimana sintaks defineModel", "apa saja field type yang didukung", "bagaimana cara declare foreign key di schema", "constraint apa saja yang ada di shorthand"
-- The user mentions dbschema-kit concepts: \`defineModel\`, factory function, shorthand syntax, \`belongsTo\`/\`hasMany\`/\`hasOne\`, \`pk\`/\`fk:\`/\`unique\`, \`checks\`, \`primaryKey\`, \`relations\`, \`referentialActions\`, \`onDelete\`/\`onUpdate\`
-- Before authoring a schema file (via Write/Edit tools) — to ground field types, constraint syntax, and relation declarations
-- Before writing a new schema file once its fields are settled with the user (or the user handed the design over) — request only the sections the file needs (e.g. section=fieldTypes, shorthandSyntax, auditColumns, relationTypes) instead of the full catalog, once per session
-- The user asks about referential actions: \`cascade\`, \`restrict\`, \`setNull\`, \`noAction\`
-- The user asks about check operations: \`in\`, \`gt\`, \`gte\`, \`lt\`, \`lte\`, \`eq\`, \`neq\`
-- The user asks about audit columns: \`created_at\`, \`created_by\`, \`updated_at\`, \`updated_by\` — the 4-column RESTForge convention shared between SDF and RDF. Trigger phrases: "audit columns", "kolom audit", "kolom created_by updated_by", "konvensi audit"
-- The user asks about soft-delete in the schema layer: the \`softDelete\` block, \`is_deleted\`/\`deleted_at\`/\`deleted_by\` columns, reusable unique columns, or why a UNIQUE constraint is rejected on a soft-delete table. Use section=softDelete. Trigger phrases: "soft delete", "soft-delete", "kolom is_deleted", "reusable unique"
-- The user asks which dialects are supported (postgres, mysql, oracle, sqlite)
-- The user is unsure about field shorthand like \`string:36 pk\` or \`decimal:15,2 default:0\`
+- Before writing or editing schema/<table>.js, once its fields are settled with the user (or the design was handed over): request only the sections the file needs (e.g. section=fieldTypes, shorthandSyntax, auditColumns, relationTypes), once per session
+- The user asks about SDF syntax: \`defineModel\`, shorthand like \`string:36 pk\` or \`decimal:15,2 default:0\`, field types, \`fk:\`/\`unique\`/\`checks\`, relations, \`onDelete\`/\`onUpdate\` ("bagaimana sintaks defineModel", "field type apa saja")
+- The user asks about audit columns (created_at, created_by, updated_at, updated_by) or soft-delete in the schema layer (section=softDelete)
+- The user asks which dialects are supported
 
 DO NOT USE FOR:
-- Validating an actual schema definition file -> use 'codegen_dbschema_validate'
-- Listing models from existing schema files -> use 'codegen_dbschema_models'
-- Generating DDL from schema files -> use 'codegen_dbschema_generate_ddl'
-- Migrating schema to a database -> use 'codegen_dbschema_migrate'
-- Introspecting an existing database into schema files -> use 'codegen_dbschema_introspect'
-- Looking up CRUD payload field validation rules -> use 'codegen_get_field_validation_catalog'
-- Looking up dashboard payload spec -> use 'codegen_get_dashboard_catalog'
-- Looking up CRUD query declarative spec -> use 'codegen_get_query_declarative_catalog'
-- Querying live database tables -> use 'codegen_list_tables' / 'codegen_describe_table'
+- Validating a schema file -> 'codegen_dbschema_validate'
+- Listing models, generating DDL, migrating, or introspecting -> 'codegen_dbschema_models' / 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_introspect'
+- RDF payload rules -> 'codegen_get_field_validation_catalog' / 'codegen_get_query_declarative_catalog'; dashboard spec -> 'codegen_get_dashboard_catalog'
+- Live database tables -> 'codegen_list_tables' / 'codegen_describe_table'
 
-This tool runs: npx restforge catalog dbschema [--section=<X>] [--name=<Y>] [--kind=<Z>] in the given cwd.
-The catalog is sourced from restforge (single source of truth) so it stays in sync with
-the dbschema-kit version installed in the project.
+SOFT-DELETE SECTION: documents the three contract columns (is_deleted/deleted_at/deleted_by, biconditional with softDelete.enabled), the reusable unique-column rules (string/text + single-column UNIQUE + physical length >= base length + 38), the UNIQUE eligibility gate (composite and non-string UNIQUEs rejected), the emitted DDL (CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes), and dialect support (Phase 1: PostgreSQL only).
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "look up the schema catalog", "create a new schema file", "validate the schema").
-- Speak in plain language. Summarise the catalog (number of field types, constraints, relations, dialects); do not paste the entire JSON unless the user explicitly asks for it.
-- The catalog is sourced from restforge (single source of truth) so it stays in sync with the dbschema-kit version installed in the project.
-- When the user asks about a specific construct (e.g. "how does belongsTo work"), use the catalog as ground truth and match the API exactly. Do not invent flags or behaviors not present in the catalog.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+This tool runs: npx restforge catalog dbschema [--section=<X>] [--name=<Y>] [--kind=<Z>] in the given cwd. The catalog is sourced from restforge (single source of truth), so it matches the installed dbschema-kit version. Use it as ground truth: do not invent flags or behaviour that are not in the catalog.`,
       inputSchema: {
         cwd: z
           .string()

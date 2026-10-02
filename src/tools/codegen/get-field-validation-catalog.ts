@@ -9,37 +9,20 @@ export function registerCodegenGetFieldValidationCatalog(server: McpServer): voi
     'codegen_get_field_validation_catalog',
     {
       title: 'Get Field Validation Catalog',
-      description: `Get authoritative JSON catalog of field validation spec (data types, constraints, format presets, audit columns convention, message override pattern) used in payload \`fieldValidation\` arrays.
+      description: `Get the authoritative JSON catalog of the RDF field validation spec (data types, constraints, format presets, audit columns convention, message override pattern) used in payload \`fieldValidation\` arrays. This is APPLICATION-LAYER validation: it runs in the generated model code and returns HTTP 400 with a structured error before the request reaches the database.
 
 USE WHEN:
-- The user asks about valid field validation constraints, types, format presets, or audit columns convention in payload JSON
-- The user asks things like "constraint apa yang valid untuk tipe X", "list field validation constraints", "tampilkan catalog validasi", "what validation rules can I use", "format preset apa saja", "show me the validation spec"
-- Before generating or editing the \`fieldValidation\` array in a payload file — to ground constraint names, scope correctness, and the message override pattern. Often called before 'codegen_generate_payload' for grounding the initial generation, or before manual editing of an existing payload.
-- The user mentions adding validation to a payload field but is unsure which constraint name to use
-- The user asks about audit columns convention (\`auditColumns: false\`, override custom names, valid/rejected values, etc.)
-- The user asks about the message override pattern (\`{constraintName}Message\`)
-- The user reports a typo-like error such as \`maxLenght\` or wonders whether \`minLength\` works on a number field — fetch the catalog to ground the answer
-- The user wants to add validation rules at APPLICATION LAYER in payload JSON (validation runs in generated model code, returns HTTP 400 with structured error before the request reaches the database), NOT native SQL DDL constraints (NOT NULL, UNIQUE, CHECK at database level)
+- Before adding or editing a \`fieldValidation\` rule in payload/<name>.json, to ground constraint names and scope
+- The user asks which constraints, types, or format presets are valid ("constraint apa yang valid untuk tipe X", "format preset apa saja")
+- The user asks about \`auditColumns\` or the \`{constraintName}Message\` override, or reports a typo-like error such as \`maxLenght\`
 
 DO NOT USE FOR:
-- Validating actual payload files against the database schema -> use 'codegen_validate_payload'
-- Validating config (license, database connection) -> use 'setup_validate_config'
-- Reading the active database connection config schema -> use 'setup_get_config_schema'
-- Generating a payload from scratch -> use 'codegen_generate_payload'
-- Applying changes to payload files -> use 'codegen_sync_payload'
-- Generating SQL DDL constraints (NOT NULL, UNIQUE, CHECK, REFERENCES, ALTER TABLE, CREATE INDEX) — these are database-level and out of scope for RESTForge field validation. They require direct SQL or a database migration tool.
+- Validating payload files against the database -> 'codegen_validate_payload'
+- Generating or syncing a payload -> 'codegen_generate_payload' / 'codegen_sync_payload'
+- Database-level constraints (NOT NULL, UNIQUE, CHECK, REFERENCES, CREATE INDEX) -> these live in the SDF (schema/<table>.js); ground them with 'codegen_get_dbschema_catalog'. When the user uses DDL terms, ask which layer they want before editing either file.
+- Config validation or the config schema -> 'setup_validate_config' / 'setup_get_config_schema'
 
-This tool runs: npx restforge catalog field-validation in the given cwd.
-The catalog is sourced from restforge (single source of truth) so it stays in sync with
-the restforge runtime version installed in the project.
-Requires @restforgejs/platform >= 2.4.0.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "install the package", "generate the payload", "edit the validation rules").
-- Speak in plain language. Summarise the catalog (number of types, constraints, format presets); do not paste the entire JSON unless the user explicitly asks for it.
-- If the user uses SQL DDL terminology (NOT NULL, UNIQUE, CHECK, ALTER TABLE, REFERENCES, CREATE INDEX), do not silently map it to payload validation. First clarify which layer the user wants: application-layer validation in payload (this catalog applies, response 400 with structured error) versus database-level DDL constraints (out of scope here, requires direct SQL or migration tool). The two layers can co-exist for the same field but behave differently.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+This tool runs: npx restforge catalog field-validation in the given cwd. The catalog is sourced from restforge (single source of truth), so it matches the installed runtime version. Requires @restforgejs/platform >= 2.4.0.`,
       inputSchema: {
         cwd: z
           .string()

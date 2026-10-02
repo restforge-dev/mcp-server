@@ -80,9 +80,7 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The config file must exist in the config/ folder.
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names.
+NOTES:
 - Summarise by component: license, database, optional redis/kafka, PID file presence, port availability.
 - Do not echo license keys, passwords, or full connection URIs from the CLI output.
 - Preflight failure is informational, not a blocker. The user can still proceed to generate the launcher (with a warning recorded).

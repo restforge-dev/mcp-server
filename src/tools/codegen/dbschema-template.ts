@@ -56,53 +56,40 @@ export function registerCodegenDbschemaTemplate(server: McpServer): void {
     'codegen_dbschema_template',
     {
       title: 'Browse / Preview / Generate Schema Templates',
-      description: `Access the RESTForge Schema Reference collection (87 ready-made templates spanning 30+ domains: ERP, finance, inventory, e-commerce, CRM, HR, POS, and more) by wrapping restforge schema template. Use it to browse and filter the catalog, preview a template's SDF or SQL, look up the available domains/categories/sections, and scaffold schema files for common business tables (e.g. sales_order, inventory, customer_invoice) when the user asks for a template.
-
-FOUR MODES:
-- LIST / BROWSE (default, no show/generate/utility flag): returns a filtered catalog of templates. Combine filters: domain (csv), table (wildcard glob like "sales*"), category, pattern, section, hasSdf, noSdf.
-- SHOW (show=true, needs a SPECIFIC table name — no wildcard): prints the template's schema. lang=sdf (default) prints the dbschema-kit factory function; lang=sql prints raw DDL. example=true adds a sample-data section (only meaningful together with show).
-- GENERATE (generate=true, needs a SPECIFIC table AND path): writes the template to the filesystem. A master-detail template writes TWO files (e.g. sales_order.js + sales_order_item.js). force=true overwrites existing destination files; without force the CLI refuses to overwrite.
-- UTILITY (stats / listDomains / listCategories / listSections): collection statistics and the lookup lists that feed the filters above.
-
-PLATFORM DEPENDENCY (important): this feature is backed by a native binary (sdf-tools.exe) that is currently WINDOWS-ONLY. On a non-Windows host, or if the binary is missing from the installed package, the CLI exits with code 3 and this tool reports that the template collection is unavailable on this platform — that is NOT a user error. In that case, author the SDF by hand (ground it with 'codegen_get_dbschema_catalog') or reverse-engineer it from an existing database with 'codegen_dbschema_introspect'.
+      description: `Access the RESTForge Schema Reference collection (87 ready-made templates across 30+ domains: ERP, finance, inventory, e-commerce, CRM, HR, POS, and more) by wrapping restforge schema template: browse and filter the catalog, preview a template's SDF or SQL, list domains/categories/sections, and scaffold schema files from a template.
 
 USE WHEN the user explicitly asks for the template collection:
-- The user asks for an example schema, a ready-made template, or "what tables/templates are available"
-- Pertanyaan dalam bentuk: "ada template schema untuk sales order nggak?", "buatkan schema inventory dari template", "contoh schema invoice", "template apa saja untuk domain ERP", "scaffold tabel pelanggan dari contoh"
-- Exploring the catalog by domain/category/pattern, or doing SDF gap analysis (noSdf=true)
-- The user wants to preview a template's SDF or SQL before committing it to a file
+- An example schema, a ready-made template, or "what templates are available" ("ada template schema untuk sales order?", "buatkan schema inventory dari template", "template apa saja untuk domain ERP")
+- Exploring the catalog by domain/category/pattern, or SDF gap analysis (noSdf=true)
+- Previewing a template's SDF or SQL before writing it to a file
 
 DO NOT USE FOR:
-- A plain request to create a table ("buatkan tabel product", "create a customer table") that does not mention a template or example -> ask the user for the fields and types when they are not stated (the user may leave the design to the assistant), then write schema/<table>.js with the file tools, grounded by 'codegen_get_dbschema_catalog'. Do not substitute a reference template for the user's own structure.
-- An explicit draft / skeleton file request ("draft table", "inisial table") -> use 'codegen_dbschema_init'
-- Editing an existing schema file -> use Edit/Write tools directly
-- Reverse-engineering SDF from a live database -> use 'codegen_dbschema_introspect'
-- Validating a schema file -> use 'codegen_dbschema_validate'
-- Generating DDL from an already-authored SDF -> use 'codegen_dbschema_generate_ddl'
-- Looking up defineModel syntax / field types / constraints -> use 'codegen_get_dbschema_catalog'
+- A plain request to create a table that does not mention a template or example ("buatkan tabel product") -> ask for the fields and types when they are not stated (the user may leave the design to the assistant), then write schema/<table>.js with the file tools, grounded by 'codegen_get_dbschema_catalog'. Never substitute a template for the user's own structure.
+- An explicit draft / skeleton file request -> 'codegen_dbschema_init'
+- Editing an existing schema file -> Edit/Write tools
+- Reverse-engineering from a live database -> 'codegen_dbschema_introspect'
+- Validating a schema or generating DDL -> 'codegen_dbschema_validate' / 'codegen_dbschema_generate_ddl'
 
-This tool runs: npx restforge schema template [filters/mode flags] in the given cwd. Boolean flags (show, generate, stats, hasSdf, noSdf, example, force, listDomains, listCategories, listSections) are sent as bare flags only when true; string/enum flags (domain, table, category, pattern, section, lang, path, format) are sent as --flag=value when supplied.
+FOUR MODES:
+- LIST / BROWSE (default, no show/generate/utility flag): filtered catalog. Filters combine: domain (csv), table (wildcard glob like "sales*"), category, pattern, section, hasSdf, noSdf.
+- SHOW (show=true, needs a SPECIFIC table name, no wildcard): prints the template. lang=sdf (default) prints the dbschema-kit factory; lang=sql prints raw DDL. example=true adds sample data (only with show).
+- GENERATE (generate=true, needs a SPECIFIC table AND path): writes the template to disk. A master-detail template writes TWO files (e.g. sales_order.js + sales_order_item.js). force=true overwrites existing files; without force the CLI refuses.
+- UTILITY (stats / listDomains / listCategories / listSections): collection statistics and the lookup lists for the filters.
 
-OUTPUT: the tool relays the CLI's text output as-is; it does not parse it. The native binary's --format=json is honoured by the list/stats/listDomains/listCategories/listSections modes (machine-readable JSON text) but NOT by show (which always prints schema code) or generate (which prints a written-files summary). Pass format=json only when you specifically want the JSON form of a list/utility result; otherwise the default human-readable text is easier to summarise.
+PLATFORM DEPENDENCY: the collection is backed by a WINDOWS-ONLY native binary (sdf-tools.exe). On another host, or when the binary is missing, the CLI exits with code 3 and this tool reports the collection as unavailable on this platform. That is NOT a user error: explain it plainly and offer to author the SDF by hand (grounded by 'codegen_get_dbschema_catalog') or introspect an existing database.
 
-CLI constraints (the CLI enforces these; this tool does not pre-validate, it forwards and relays the CLI's own error):
-- show and generate require a specific table name (no wildcard).
-- generate requires path.
-- example is only meaningful together with show.
-- force only matters with generate (overwrite existing files).
-- master-detail templates generate two files.
+This tool runs: npx restforge schema template [filters/mode flags] in the given cwd. Boolean flags (show, generate, stats, hasSdf, noSdf, example, force, listDomains, listCategories, listSections) are sent bare only when true; string/enum flags (domain, table, category, pattern, section, lang, path, format) are sent as --flag=value when supplied.
+
+OUTPUT: the CLI text is relayed as-is. --format=json is honoured by list/stats/listDomains/listCategories/listSections but NOT by show (schema code) or generate (written-files summary). Pass format=json only when the JSON form of a list/utility result is needed.
+
+CLI constraints (enforced by the CLI; this tool forwards its error): show and generate need a specific table name; generate needs path; example only works with show; force only matters with generate.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The template feature requires the Windows-only sdf-tools.exe binary shipped with the package (exit 3 otherwise — see PLATFORM DEPENDENCY).
+- The Windows-only sdf-tools.exe binary must ship with the package (exit 3 otherwise).
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "browse the schema templates", "preview the sales order template", "scaffold the table from a template").
-- Speak in plain language. Summarise list/stats output (counts, the templates relevant to the user's task); do not paste the entire table or JSON unless the user explicitly asks.
-- For generate: confirm the files that were written and their paths (a master-detail template creates two files). Suggest validating the generated schema next.
-- For the Windows-only exit 3 case: explain plainly that the ready-made template collection is not available on this platform, then offer the alternatives (author the SDF by hand with the catalog as reference, or reverse-engineer from an existing database). Do not present it as a failure of the user's request.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- For generate: confirm the files written and their paths (a master-detail template creates two files), then suggest validating the schema.`,
       inputSchema: {
         cwd: z
           .string()

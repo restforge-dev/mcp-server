@@ -32,13 +32,7 @@ Preconditions:
   that case the response surfaces a non-error precondition suggesting the designer be updated.
 
 Cross-reference (read-before-write):
-- Call this tool BEFORE authoring or editing a UDF payload, and before generating frontend code, to ground the payload shape against the designer's own rules.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "look up the UDF rules", "validate the payload", "generate the frontend code").
-- Speak in plain language. Summarise the catalog (e.g. how many valid field types, which sections are present); do not paste the entire JSON unless the user explicitly asks for it.
-- When a precondition is not met (binary missing, or too old to support the catalog), frame it as a question or next-step suggestion rather than an error.`,
+- Call this tool BEFORE authoring or editing a UDF payload, and before generating frontend code, to ground the payload shape against the designer's own rules.`,
       inputSchema: {
         cwd: z
           .string()

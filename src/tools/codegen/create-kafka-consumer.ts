@@ -19,7 +19,7 @@ USE WHEN:
 DO NOT USE FOR:
 - Generating a REST endpoint -> use 'codegen_create_endpoint'
 - Generating a processor / background job -> use 'codegen_create_processor'
-- Deploying or running the consumer -> out of scope (the generated code is run by the internal 'restforge-consumer' binary, not this server)
+- Preparing a way to run the consumer -> 'runtime_generate_consumer_launcher' (the user starts it; this server never runs it)
 
 This tool runs: npx restforge kafka consumer-create --project=<project> --name=<name> --payload=<payload> [--force] in the given cwd.
 
@@ -28,12 +28,8 @@ Preconditions:
 - The named consumer payload JSON must exist. This tool does not pre-check it — if the CLI fails, the failure response surfaces the cause.
 - Without 'force', the command fails if the consumer files already exist.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "generate the Kafka consumer").
-- Speak in plain language; summarise the result. Do not paste raw CLI output unless the user explicitly asks.
-- Mention that the generated consumer is run separately by the internal consumer runtime, not by this assistant.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Mention that the generated consumer is run separately by the internal consumer runtime, not by this assistant.`,
       inputSchema: {
         cwd: z
           .string()

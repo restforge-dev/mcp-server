@@ -70,12 +70,9 @@ Preconditions:
 Note: Google Sign-In and @restforgejs/auth (auth+RBAC backend) are out of scope for this command.
 Server-side protection is configured separately through the backend payload authGuard block.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
+NOTES:
 - Summarise what was retrofitted: which files were written, which pages got the auth guard, and
-  whether the plugin login artifacts were rendered as well.
-- When a precondition is not met, frame it as a next-step suggestion.`,
+  whether the plugin login artifacts were rendered as well.`,
       inputSchema: {
         cwd: z
           .string()

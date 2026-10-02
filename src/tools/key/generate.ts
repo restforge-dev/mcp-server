@@ -29,10 +29,8 @@ SECURITY NOTE: the generated key value is sensitive and will appear in this tool
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "generate the API key").
-- Confirm the key was written to the target file; do not paste the raw key unless the user explicitly asks for it.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Confirm the key was written to the target file; do not paste the raw key unless the user explicitly asks for it.`,
       inputSchema: {
         cwd: z
           .string()

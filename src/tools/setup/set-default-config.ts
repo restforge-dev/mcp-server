@@ -23,12 +23,7 @@ DO NOT USE FOR:
 This tool runs: npx restforge config set-default --config=<config> in the given cwd. The config is looked up as: cwd -> config/ folder -> with +.env extension.
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "set the default config").
-- Confirm which file is now the default. Keep the reply concise.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The project must have @restforgejs/platform installed in node_modules.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder (must have @restforgejs/platform installed)'),
         config: z.string().min(1).describe('Config file to set as default. REQUIRED. Looked up: cwd -> config/ -> +.env.'),

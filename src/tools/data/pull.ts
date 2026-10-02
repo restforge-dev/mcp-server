@@ -29,11 +29,8 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The SDF (schema files) and a database config must be resolvable. Without --config, a default config must be set. This tool does not pre-check these — if the CLI fails, the failure response surfaces the cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "export the table data", "load the data into the target database").
-- The CLI prints a JSON summary; read it and tell the user how many rows/tables were exported and where the files were written. Do not paste the raw JSON unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- The CLI prints a JSON summary; read it and tell the user how many rows/tables were exported and where the files were written. Do not paste the raw JSON unless the user explicitly asks.`,
       inputSchema: {
         cwd: z
           .string()

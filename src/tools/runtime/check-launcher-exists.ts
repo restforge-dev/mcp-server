@@ -47,11 +47,8 @@ The list of files depends on os + mode (file names are FIXED, not user-customisa
 - linux + host:   server-start.sh, server-stop.sh
 - linux + pm2:    server-start.sh, server-stop.sh, ecosystem.config.js
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names.
-- When at least one file already exists, ask the user whether to overwrite (then call generate with overwrite=true).
-- Do not echo the JSON unless explicitly asked.`,
+NOTES:
+- When at least one file already exists, ask the user whether to overwrite (then call generate with overwrite=true).`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder root'),
         os: z.enum(['windows', 'linux']).describe('Target OS for the launcher'),

@@ -42,13 +42,7 @@ typically run after 'setup_create_folder' creates the project folder, and before
 will return a precondition message if this tool has not been run first. // per §5.2
 
 This tool runs: npm install @restforgejs/platform@<version> in the given cwd (local install, not global).
-Default version is "beta" because RESTForge is currently a public pre-release. Use "latest" once stable, or a specific version (e.g. "1.2.3").
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "create the project folder", "generate the initial config", "fill in the credentials").
-- Speak in plain language. Summarise the result; do not paste raw npm output unless the user explicitly asks.
-- When a precondition is not met (e.g. the project folder is missing), frame it as a question or next-step suggestion rather than an error.`,
+Default version is "beta" because RESTForge is currently a public pre-release. Use "latest" once stable, or a specific version (e.g. "1.2.3").`,
       inputSchema: {
         cwd: z
           .string()

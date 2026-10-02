@@ -11,6 +11,8 @@ export function registerDataPush(server: McpServer): void {
       title: 'Push Envelope Files into Database',
       description: `Load rows from JSON envelope files (data-storage/<table>.json) INTO target database tables via batch INSERT, driven purely by SDF metadata, by wrapping restforge data push. This is APPEND-ONLY (no upsert/replace). Loads one table (--table), a schema or comma-separated schemas (--schema), or every table that has a file (--all-schemas). File names match 'data_pull' exactly, so pulled files can be pushed directly.
 
+DESTRUCTIVE: writes rows into the target database and is append-only, so re-running inserts duplicates. Confirm the target config and tables with the user before calling.
+
 USE WHEN:
 - The user wants to import, load, seed, or restore table rows from envelope files into a database, e.g. "push data", "import data ke database", "load rows dari file", "seed data tabel"
 - The user is moving data between databases and has already exported files with 'data_pull' — push is the second half
@@ -25,18 +27,12 @@ This tool runs: npx restforge data push (--table | --schema | --all-schemas) [--
 
 Scope (exactly ONE required): provide exactly one of 'table', 'schema', or 'allSchemas'. For schema/allSchemas, tables are loaded in topological FK order (parent before child).
 
-IMPORTANT — this MUTATES the target database (inserts rows). Because it is append-only, running it twice inserts the data twice. Confirm with the user before pushing into a database that may already contain the rows.
-
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The envelope files must exist under the storage folder, and a database config must be resolvable. This tool does not pre-check these — if the CLI fails, the failure response surfaces the cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "load the data into the database").
-- The CLI prints a JSON summary; read it and tell the user how many rows/tables were inserted. Do not paste the raw JSON unless the user explicitly asks.
-- Because the import is append-only, remind the user that re-running adds duplicate rows.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- The CLI prints a JSON summary; read it and tell the user how many rows/tables were inserted. Do not paste the raw JSON unless the user explicitly asks.`,
       inputSchema: {
         cwd: z
           .string()

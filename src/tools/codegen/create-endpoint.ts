@@ -44,60 +44,36 @@ export function registerCodegenCreateEndpoint(server: McpServer): void {
     'codegen_create_endpoint',
     {
       title: 'Create Endpoint Module',
-      description: `Generate a project + endpoint module (submodule, model, metadata, demo files, optional audit migration) from an existing payload spec by wrapping restforge create. URL pattern produced: /api/{project}/{endpoint}/{action}.
+      description: `Generate the runnable endpoint module (submodule, model, metadata, demo files, optional audit migration) for a project from an existing RDF payload, by wrapping restforge create. URL pattern produced: /api/{project}/{endpoint}/{action}.
 
-This tool is DESTRUCTIVE BY DEFAULT: it spawns the CLI which writes / overwrites files in 'src/modules/<project>/', 'src/models/<project>/', 'metadata/<project>/', 'examples/<project>/<endpoint>/', and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode that reports what would change.
-
-The 'force' parameter controls the overwrite gate and defaults to TRUE, which means an existing module IS overwritten (the CLI archives the previous version first — see the safety net below). Passing force=false gives a non-overwrite path:
-- When nothing conflicts, the CLI generates normally — same result as force=true.
-- When the module already exists, the CLI prints a conflict summary and then asks its interactive y/N question. In this non-interactive context the question receives end-of-input immediately, so the CLI stops right there: NOTHING is written or overwritten, and the tool reports the run as aborted. This is the closest thing to a dry run for conflict detection: it tells you what already exists without touching it.
-- force=false also makes the CLI refuse to register a project under a different database type than the one already recorded in the registry, instead of silently switching it.
-Use force=false when the user wants to know whether a module already exists before committing to a regeneration; use the default force=true for a deliberate regeneration.
-
-Database type is resolved by the CLI, not by this tool. Order of priority: (1) the 'database' parameter when it is set — it is passed through as '--database=<value>' and always wins; (2) auto-detection of DB_TYPE from the active config (the file named by 'config', otherwise the recorded default config) when 'database' is not set — no '--database' flag is sent at all in that case; (3) fallback 'postgres' inside the CLI when neither applies. Practical consequence: do NOT set 'database' just to be explicit. Leaving it unset lets a MySQL, Oracle, or SQLite project be generated for its own database type; setting it to a guessed value overrides the project's config silently.
-
-Safety net: when the CLI overwrites an existing module, model, or query directory, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
-
-AI responsibility — IMPORTANT: because this tool executes immediately and, with the default force=true, may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
-- "Saya akan generate endpoint <endpoint> di project <project>. Kalau modul/model lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
-- "I will generate <endpoint> under project <project>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
-- Mention a database type in that confirmation only when the user named one (i.e. when the 'database' parameter is set). When it is left unset, do not guess a type — the CLI takes it from the project's own config.
+DESTRUCTIVE: with the default force=true an existing module, model, or query folder is overwritten (the CLI first moves the previous files to '.restforge/archive/<run>/'). There is no preview. Confirm intent with the user in plain language BEFORE calling, e.g. "Saya akan generate endpoint <endpoint> di project <project>. Versi lama, bila ada, diarsipkan ke .restforge/archive. Lanjut?". Do not detect conflicts yourself.
 
 USE WHEN:
-- The user asks to generate, create, or scaffold an endpoint, resource, or module from a payload (e.g. "buatkan endpoint untuk product", "generate resource users", "create endpoint dari payload X", "scaffold a new endpoint")
-- The user mentions "endpoint", "resource", "module" or the URL pattern /api/{project}/{resource}/{action} and wants to register it as runnable code
-- The user has authored a payload file (e.g. via 'codegen_generate_payload' or manually) and now wants to materialise it as runnable code in the project
-- Pertanyaan dalam bentuk: "tambahkan endpoint X ke project Y", "buat module baru di project Z", "scaffold endpoint baru pakai payload ini", "generate kode dari payload ini"
-- The user asks to add a new endpoint to an existing project (registry already has the project, just adding more endpoints)
-- The user asks to bootstrap a brand-new project together with its first endpoint
-- The user asks about regenerating an existing endpoint after the payload changed (this triggers overwrite + archive flow inside the CLI; previous versions become '.archive.NNN' in place)
-- After 'codegen_validate_payload' confirmed the payload is valid — this is the natural follow-up that turns a verified payload into runnable code
+- The user asks to generate, create, or scaffold an endpoint, resource, or module from a payload ("buatkan endpoint untuk product", "generate kode dari payload ini", "tambahkan endpoint X ke project Y")
+- A payload was just generated or validated and the user's request already covers making it runnable
+- The user wants to regenerate an endpoint after its payload changed, or bootstrap a new project with its first endpoint
 
 DO NOT USE FOR:
-- Generating the payload JSON itself from a database table -> use 'codegen_generate_payload'
-- Validating a payload before generation -> use 'codegen_validate_payload'
-- Inspecting per-column differences between payload and database -> use 'codegen_diff_payload'
-- Syncing payload changes back into existing payload files after schema drift -> use 'codegen_sync_payload'
-- Looking up the field validation catalog before authoring the payload -> use 'codegen_get_field_validation_catalog'
-- Looking up the query declarative catalog before authoring the payload -> use 'codegen_get_query_declarative_catalog'
-- Deleting a project or endpoint — out of scope; the user must run 'npx restforge drop' manually
-- Generating a processor (Kafka consumer, etc.) — out of scope; the CLI has separate 'processor' and 'consumer-create' subcommands not covered by this MCP server yet
-- Generating a dashboard endpoint — out of scope; the CLI has a separate 'dashboard' subcommand
-- Listing all registered projects in the registry — out of scope here; use the CLI's 'list' subcommand directly
-- Database DDL changes (CREATE TABLE, ALTER TABLE) — not in this tool's scope. The audit migration sub-step DOES create a single audit table when the payload uses the 'audit' fieldPolicy strategy, but that is the only DDL it touches.
+- Producing the payload JSON from a table -> 'codegen_generate_payload'
+- Validating or diffing a payload -> 'codegen_validate_payload' / 'codegen_diff_payload'
+- Merging schema drift into payload files -> 'codegen_sync_payload'
+- A dashboard endpoint -> 'codegen_create_dashboard'; a processor -> 'codegen_create_processor'; a Kafka consumer -> 'codegen_create_kafka_consumer'
+- Listing or deleting projects -> 'project_list' / 'project_delete'
+- Database DDL changes -> the dbschema tools (the only DDL this tool emits is the audit table for the 'audit' fieldPolicy)
+
+FORCE=FALSE (conflict probe): when nothing conflicts the CLI generates normally. When the module already exists, the CLI prints a conflict summary and stops at its y/N prompt (end-of-input in this context): NOTHING is written and the run is reported as aborted. force=false also refuses to re-register a project under a different database type. Use it when the user wants to know whether a module exists before regenerating.
+
+DATABASE TYPE: resolved by the CLI. (1) 'database' when set always wins; (2) otherwise DB_TYPE from the active config ('config', else the recorded default); (3) otherwise 'postgres'. Do NOT set 'database' just to be explicit: a guessed value silently overrides the project's config. Mention a database type in the confirmation only when the user named one.
+
+SAFETY NET: before overwriting, the CLI moves the previous files to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept), so a run can be undone by copying that folder back. The CLI writes to 'src/modules/<project>/', 'src/models/<project>/', 'metadata/<project>/', 'examples/<project>/<endpoint>/', and updates '.restforge/projects.json'.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json) before calling this tool. The 'payload' parameter takes the file name with or without the '.json' extension — the value is passed to the CLI verbatim, and the CLI resolves both forms to the same lowercase '<name>.json' file.
-- The CLI itself rejects reserved project names (src, lib, node_modules, config, utils, models, controllers, middleware, routes) and reserved endpoint names (health, status, admin, api, auth, login, logout, register, index, main, app, config, test, docs, swagger, graphql, websocket, socket). When in doubt, ask the user to pick a different name before invoking this tool.
+- The payload file must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json). The 'payload' parameter takes the name with or without '.json'; the CLI resolves both to the same lowercase file.
+- The CLI rejects reserved project names (src, lib, node_modules, config, utils, models, controllers, middleware, routes) and reserved endpoint names (health, status, admin, api, auth, login, logout, register, index, main, app, config, test, docs, swagger, graphql, websocket, socket). When in doubt, ask the user for a different name first.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "the endpoint generator", "the project generator", "generate the payload first", "validate the payload first").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- This tool is destructive: it can overwrite existing module / model / query files. BEFORE invoking this tool, ALWAYS confirm with the user in plain language. Example: "Saya akan generate endpoint <endpoint> di project <project>. Kalau file lama sudah ada, akan ditimpa (versi lama disimpan sebagai .archive.NNN). Lanjut?". Do not detect conflicts programmatically; the CLI handles that and creates the archive.
-- After the tool runs, summarise the result. Read the CLI output and identify any archive activity (the CLI uses the '.archive.NNN' naming convention in the filesystem and reports archive activity in its output, but the exact wording may evolve). When archives are created, tell the user that previous versions are preserved in case rollback is needed.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- After the run, read the CLI output for archive activity ('.restforge/archive/<run>/'); when archives were created, tell the user the previous versions are kept for rollback.`,
       inputSchema: {
         cwd: z
           .string()
@@ -156,12 +132,12 @@ PRESENTATION GUIDANCE:
         force: z
           .boolean()
           .default(true)
-          .describe('Default true — the existing behaviour: overwrite an existing module (the CLI archives the previous version as .archive.NNN first). Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but when the module already exists the CLI stops at its confirmation question without writing anything and this tool reports the run as aborted. force=false also blocks switching an already registered project to a different database type.'),
+          .describe('Default true — the existing behaviour: overwrite an existing module (the CLI first moves the previous files to .restforge/archive/<run>/). Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but when the module already exists the CLI stops at its confirmation question without writing anything and this tool reports the run as aborted. force=false also blocks switching an already registered project to a different database type.'),
       },
       annotations: {
         title: 'Create Endpoint Module',
         readOnlyHint: false,    // tool spawns CLI that writes module/model/metadata/demo files and updates the registry
-        destructiveHint: true,  // can overwrite existing files (CLI archives them as .archive.NNN first)
+        destructiveHint: true,  // can overwrite existing files (CLI archives them to .restforge/archive/<run>/ first)
         idempotentHint: false,  // re-running creates new archive files and may execute audit migration again
       },
     },
@@ -339,7 +315,7 @@ ${result.stdout}
 For the assistant:
 - Tell the user that nothing was written, overwritten, or archived: the generator found that this endpoint already exists and stopped at its confirmation step before touching anything.
 - The captured output is often just the confirmation question itself — the per-file conflict summary and risk level are printed by the CLI but do not always reach this tool. Summarise the conflicting files or the risk level ONLY if they actually appear in the output above; never invent them. When they are absent, say plainly that the generator reported a conflict without listing details here.
-- Offer the two real continuations in plain language: (1) regenerate deliberately with overwriting enabled, in which case the existing files are archived as '.archive.NNN' before being replaced, or (2) leave the existing module untouched and change nothing. Generating under a different endpoint name is a variant of option 2 — it creates a new module and leaves the existing one alone. Only regenerate after the user confirms.
+- Offer the two real continuations in plain language: (1) regenerate deliberately with overwriting enabled, in which case the existing files are archived to '.restforge/archive/<run>/' before being replaced, or (2) leave the existing module untouched and change nothing. Generating under a different endpoint name is a variant of option 2 — it creates a new module and leaves the existing one alone. Only regenerate after the user confirms.
 - Do not mention internal tool names or parameter names. Match the user's language.`,
             },
           ],
@@ -419,7 +395,7 @@ For the assistant:
 - Confirm to the user in plain language that the project and endpoint were generated. Mention the project and the endpoint. Mention the database type only when it is known: either it was passed explicitly, or the CLI reported the resolved type in its output (it prints a 'Database: <type>' line, annotated with '(auto-detected ...)' when it came from a config, in verbose runs). When the fact block above says the database was not specified, do not invent a type.
 - Do not paste the entire CLI output unless the user explicitly asks; summarise instead.
 - Suggest natural follow-up actions appropriate to context: review the generated files, run the project to test the new endpoint, generate a processor or test, etc. Do not mention internal tool names.
-- Read the CLI output to identify any archive activity. The CLI uses the '.archive.NNN' naming convention in the filesystem; it also reports archive activity in its output, though the exact phrasing may evolve. When archives are created, tell the user that the previous version of each overwritten file is preserved as an archive file in the same folder, and explain where to find them if rollback is needed.
+- Read the CLI output to identify any archive activity. Overwritten files are moved to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept). When archives are created, tell the user the previous versions are kept there and can be copied back for a rollback.
 - Read the CLI output to identify any audit migration activity (the CLI reports it when the payload uses a fieldPolicy 'audit' strategy). When present, summarise it briefly to the user (e.g. that the audit table for the related table was created or updated).
 - Match the user's language.`,
           },

@@ -4,7 +4,8 @@
  *
  * Helper script for build-release.bat. Performs:
  *   1. Bump version in package.json (based on flag)
- *   2. Run `npm run build` (TypeScript -> dist/)
+ *   2. Run `npm run check:guidance` (guard ukuran panduan agent), lalu
+ *      `npm run build` (TypeScript -> dist/)
  *   3. Run `npm pack` to create the tarball
  *   4. Move the tarball into dist-tarball/
  *
@@ -91,6 +92,16 @@ function bumpVersion(current, flag) {
     default:
       throw new Error(`Unhandled flag: ${flag}`);
   }
+}
+
+// Guard panduan agent (issue skills/MCP #002) dijalankan sebelum version bump,
+// agar build yang gagal guard tidak meninggalkan versi yang sudah dinaikkan.
+console.log('[build-pack] Checking agent guidance size...');
+try {
+  execSync('npm run check:guidance', { cwd: projectRoot, stdio: 'inherit' });
+} catch (err) {
+  console.error('[build-pack] Guidance guard failed.');
+  process.exit(1);
 }
 
 let newVersion;

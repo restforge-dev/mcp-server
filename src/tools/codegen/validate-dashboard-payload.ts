@@ -34,50 +34,30 @@ export function registerCodegenValidateDashboardPayload(server: McpServer): void
     'codegen_validate_dashboard_payload',
     {
       title: 'Validate Dashboard Payload',
-      description: `Validate the structural correctness of a dashboard payload spec WITHOUT generating any file, by wrapping restforge dashboard --validate-only=true.
-
-Dashboards have a different shape than CRUD endpoints (widgets array, no tableName, no fieldValidation). The CLI's DashboardValidator checks: widgets array shape, allowed/forbidden fields per level, the 'query' vs 'queries' mutual exclusion, params contract (each ':placeholder' used in SQL must be declared in 'params'), 'file:query/<name>.sql' reference resolution, and that no frontend-only fields (widgetType, layout, title, subtitle, color) leak into the payload.
-
-This tool is READ-ONLY: it does NOT write any file, does NOT touch the database, does NOT update the project registry. It only reports whether the payload structure is valid. Re-running with the same input gives the same result (idempotent).
-
-Workflow positioning: this is the natural pre-flight before 'codegen_create_dashboard'. When the AI authors a dashboard payload (manually via Write), call this tool first to surface validation errors cheaply — before invoking the generator that performs filesystem writes.
-
-Gap closed: the general 'codegen_validate_payload' tool works on CRUD payloads per table and does not understand the dashboard shape. This tool fills that gap.
-
-Platform version requirement: this tool needs a @restforgejs/platform that provides 'dashboard create --validate-only'. That flag exists in the platform source AFTER release 5.5.5; the exact release number carrying it is whatever the next published version turns out to be. On an older platform the CLI answers "Unknown flag: --validate-only" and nothing is validated — this tool detects that answer and reports it as an upgrade requirement rather than as a payload problem. In that situation the payload can still be checked by running the generator itself ('codegen_create_dashboard'), which runs the very same validator before it writes anything.
+      description: `Validate the structure of a dashboard payload WITHOUT generating any file, by wrapping restforge dashboard --validate-only=true. READ-ONLY: no file, database, or registry change; idempotent.
 
 USE WHEN:
-- The user asks to validate, check, or verify the structure of a dashboard payload before generating
-- The user has authored a dashboard payload (with 'widgets' array) and wants to confirm it parses correctly before invoking the generator
-- Pertanyaan dalam bentuk: "cek dashboard payload saya valid?", "validate dashboard config", "is this dashboard schema correct?", "apakah payload dashboard ini OK?"
-- Before invoking 'codegen_create_dashboard' — pre-flight to surface validation errors early (cheaper than failing inside the generator stage, which performs filesystem writes)
-- The user reports that 'codegen_create_dashboard' failed with a validation-related error and wants to fix the payload iteratively
-- The user mentions specific dashboard validation rules: forbidden frontend fields (widgetType, layout, title, subtitle, color), 'query' vs 'queries' mutex, params placeholder declaration
-- After the user manually edited a dashboard payload and wants a quick sanity check before re-running the generator
-- The user is unsure whether their payload follows dashboard shape (widgets) or CRUD shape (tableName) and wants verification
+- The user asks to check a dashboard payload ("cek dashboard payload saya valid?", "apakah payload dashboard ini OK?")
+- A dashboard payload (with a 'widgets' array) was just authored or edited: pre-flight before 'codegen_create_dashboard'
+- 'codegen_create_dashboard' failed with a validation error and the payload is being fixed iteratively
 
 DO NOT USE FOR:
-- Validating a CRUD payload (with 'tableName' and 'fieldName') against database schema -> use 'codegen_validate_payload'
-- Generating the dashboard module after validation -> use 'codegen_create_dashboard'
-- Inspecting drift between CRUD payload and database -> use 'codegen_validate_payload' (this dashboard validator does NOT touch the database)
-- Generating a payload from scratch -> use 'codegen_generate_payload' for CRUD; for dashboard, the user authors manually
-- Looking up the field validation catalog -> use 'codegen_get_field_validation_catalog' (different scope; dashboard payloads have no fieldValidation)
-- Validating SQL syntax inside a widget query — the validator only checks placeholder declarations and structural shape, not SQL semantics. SQL errors will only surface when the dashboard endpoint is actually called at runtime.
+- A CRUD payload (with 'tableName' and 'fieldName') -> 'codegen_validate_payload'
+- Generating the dashboard module -> 'codegen_create_dashboard'
+- Looking up the dashboard contract -> 'codegen_get_dashboard_catalog'
+- SQL semantics inside a widget query: only placeholders and structure are checked here; check a query with 'codegen_validate_sql'
 
-Cross-reference: this tool is the read-only sibling of 'codegen_create_dashboard'. Both have nearly identical input schemas, but this tool only validates and does NOT generate any file.
+CHECKS: the CLI's DashboardValidator checks the widgets array shape, allowed/forbidden fields per level, the 'query' vs 'queries' mutual exclusion, the params contract (each ':placeholder' must be declared in 'params'), 'file:query/<name>.sql' resolution, and that no frontend-only fields (widgetType, layout, title, subtitle, color) leak in.
+
+PLATFORM VERSION: needs a @restforgejs/platform that provides 'dashboard create --validate-only' (added after 5.5.5). On an older platform the CLI answers "Unknown flag: --validate-only"; this tool reports that as an upgrade requirement, not a payload problem. In that case 'codegen_create_dashboard' runs the same validator before writing anything.
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules, in a version that provides 'dashboard create --validate-only' (see the version requirement above).
-- The payload file must exist before calling this tool. The 'payload' value is handed to the CLI exactly as written, so it must carry the '.json' extension: the CLI looks for '<cwd>/payload/<payload>' and then '<cwd>/<payload>' and never appends an extension of its own.
-- The dashboard name MUST start with 'dash-' prefix (CLI requirement). For validate-only mode, this is checked at the argument-parser level even though the value is not used to write any file.
+- The project must have @restforgejs/platform installed in node_modules (see the version requirement above).
+- The 'payload' value is passed verbatim and must carry '.json': the CLI looks for '<cwd>/payload/<payload>' then '<cwd>/<payload>'.
+- The dashboard name MUST start with 'dash-'; the argument parser checks it even in validate-only mode.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "validate the dashboard payload", "generate the dashboard module").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- This tool is read-only: it validates payload structure without writing files or touching the database. Safe to invoke proactively before 'codegen_create_dashboard' to give the user faster feedback on payload errors.
-- If validation passes, briefly confirm the result and offer to proceed with generation. If validation fails, surface the specific error in plain language and offer to help fix it. Do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Valid: confirm briefly and continue to generation when the user's request already covers it. Invalid: explain the specific error and help fix it.`,
       inputSchema: {
         cwd: z
           .string()

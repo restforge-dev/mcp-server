@@ -22,12 +22,7 @@ DO NOT USE FOR:
 This tool runs: npx restforge project list in the given cwd (the verb takes no other flags).
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "list the projects").
-- Summarise the projects (names, endpoint counts, database types). Do not paste raw output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The project must have @restforgejs/platform installed in node_modules.`,
       inputSchema: {
         cwd: z
           .string()

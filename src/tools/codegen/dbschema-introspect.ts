@@ -39,15 +39,11 @@ Preconditions:
 - The config file (default 'db-connection.env') must exist and contain valid database credentials.
 - 'schemaPath' is required for every mode. The CLI declares --schema-path as a required flag and rejects the call at parse level without it, even when 'dryRun' is true.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "introspect the database", "validate the schema", "preview before writing").
-- Speak in plain language. Confirm the mode (single-table / bulk / dry-run) and the output target; do not paste raw CLI output unless the user explicitly asks.
+NOTES:
 - Mode is derived from the combination of 'table', 'schema', and 'allSchemas'. Confirm with the user before invoking — different modes produce different file layouts (flat vs subfolder).
 - Without 'force', the tool refuses to overwrite existing files. If the user wants to refresh introspection, confirm before passing force=true.
 - 'dryRun=true' is the safe path for preview. Suggest dry-run first when the user is exploring an unfamiliar database.
-- This is a write operation in non-dry-run mode. Files in the output target may have been created or overwritten.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- This is a write operation in non-dry-run mode. Files in the output target may have been created or overwritten.`,
       inputSchema: {
         cwd: z
           .string()

@@ -28,13 +28,7 @@ DO NOT USE FOR:
 
 This tool runs: npx restforge config template in the given cwd.
 This tool is READ-ONLY and safe to call repeatedly. No file is written.
-Requires @restforgejs/platform >= 2.3.1.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "install the package", "set up the initial config", "show the active configuration").
-- Speak in plain language. Summarise what the template contains (sections present, total parameters); do not paste the entire template body unless the user explicitly asks for it.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+Requires @restforgejs/platform >= 2.3.1.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder (must have @restforgejs/platform installed in node_modules)'),
       },

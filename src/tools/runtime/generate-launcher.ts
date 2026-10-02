@@ -239,9 +239,7 @@ Preconditions:
 - 'cluster' and 'workers' are mutually exclusive.
 - 'watch' is not allowed with mode=pm2.
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names. Refer to the produced files by their visible names (e.g. 'server-start.bat').
+NOTES:
 - Tell the user clearly that the AI does NOT execute the script — they must run it themselves so the server keeps running after the AI session ends.
 - For PM2 mode: warn the user that PM2 must be installed globally first (npm install -g pm2). Do not auto-install.
 - After generation, summarise: location, files produced, how to start, how to stop. Do not paste the JSON envelope unless explicitly asked.

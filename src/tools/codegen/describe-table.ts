@@ -25,7 +25,7 @@ DO NOT USE FOR:
 - Listing all tables in the database -> use 'codegen_list_tables'
 - Querying the actual row data inside a table -> out of scope; this tool returns metadata (columns, PK, FK, indexes) only, not row content
 - Validating a payload spec file against the database schema (file-level diff) -> use 'codegen_validate_payload' or 'codegen_diff_payload'
-- Modifying the schema (ALTER TABLE) -> out of scope
+- Modifying the schema (ALTER TABLE) -> edit the SDF, then 'codegen_dbschema_diff' and 'codegen_dbschema_apply'
 - Inspecting the SQL definition behind a database view -> out of scope; only column-level info is returned for views
 - Cross-database introspection (multiple databases at once) -> out of scope; a single config = a single connection
 
@@ -39,14 +39,10 @@ Preconditions:
 - The config file (default 'db-connection.env') must exist in the project and contain valid database credentials. This tool does not pre-check that — if the CLI fails, the failure response will surface the underlying cause.
 - The named table must exist in the database; otherwise the CLI fails with a "Table 'X' not found" error.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "describe the table", "list the database tables", "install the package").
-- Speak in plain language. Summarise the result; do not paste the raw JSON unless the user explicitly asks.
+NOTES:
 - This is a live introspection: the tool actively queries the database catalog. The result reflects the schema state at query time.
 - Column types are dialect-specific (Postgres: 'character varying(N)', MySQL: 'varchar(N)', Oracle: 'VARCHAR2(N)'). Use the type as-is when the user asks about column constraints; do not normalise.
-- Foreign key 'references' field is the JOIN target — when the user asks "how do I join A and B", look at FK paths in both directions to compose the JOIN clause.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+- Foreign key 'references' field is the JOIN target — when the user asks "how do I join A and B", look at FK paths in both directions to compose the JOIN clause.`,
       inputSchema: {
         cwd: z
           .string()

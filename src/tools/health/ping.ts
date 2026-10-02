@@ -23,13 +23,7 @@ DO NOT USE FOR:
 - Anything related to RESTForge state, configuration, or project setup
 
 This tool runs in-process: it does not touch the filesystem, network, or any RESTForge component.
-Output: "pong" with ISO 8601 timestamp and server version, plus the optional echoed message.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "verify the MCP server is responsive", "validate the configuration").
-- Speak in plain language. Confirm that the MCP server is responsive and report the timestamp and server version.
-- Keep the reply concise; this is a smoke test, not a diagnostic dump.`,
+Output: "pong" with ISO 8601 timestamp and server version, plus the optional echoed message.`,
       inputSchema: {
         message: z
           .string()

@@ -32,12 +32,8 @@ DO NOT USE FOR:
 
 Behavior: read existing file, update LICENSE/SERVER_*/DB_* entries in place, append any missing keys at the bottom, and write back. Comments, blank lines, and unrelated parameters are preserved verbatim. Output file: <cwd>/config/db-connection.env.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "set up the initial config", "update a single value", "validate the connection").
-- Speak in plain language. Summarise what was written; do not paste the full field list unless the user explicitly asks.
-- Do not echo sensitive values (license keys, passwords) into chat even when they appear masked in the response. Confirm only that they were set.
-- When a precondition is not met (e.g. config file is missing), frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Do not echo sensitive values (license keys, passwords) into chat even when they appear masked in the response. Confirm only that they were set.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         license: z

@@ -44,13 +44,10 @@ Preconditions:
 - The project folder must have @restforgejs/platform installed in node_modules. This tool
   pre-checks that; if the package is missing, the response surfaces a non-error precondition.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
+NOTES:
 - Summarise the state that answers the user's question (activated or not, type, expiry). Treat
   the license key, e-mail and machine id as sensitive: repeat them only when the user asks for
-  them specifically.
-- When a precondition is not met, frame it as a question or next-step suggestion.`,
+  them specifically.`,
       inputSchema: {
         cwd: z
           .string()

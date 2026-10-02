@@ -11,8 +11,6 @@ export function registerCodegenMigratePayload(server: McpServer): void {
       title: 'Migrate Payload (RDF backend -> UDF frontend)',
       description: `Convert an existing backend payload file (RDF) into a frontend payload (UDF) for RESTForge Designer, by wrapping restforge payload migrate. The output is always a SPLIT multi-file set written into an output directory (app-config.json, one file per page under pages/, and an aggregator <appCode>.json), not a single UDF file. The migrator also auto-discovers JOINed tables, so one JOINed RDF can produce several pages at once.
 
-PRIMARY PATH TO CREATE A UDF (firm): this is the FIRST and preferred way to produce a UDF. RESTForge is backend-first — a UDF is normally DERIVED from an existing backend RDF via this tool, not written by hand. Whenever a backend RDF payload exists and the user wants a UDF/frontend, START HERE. Only hand-author a UDF from scratch (grounded by 'designer_get_udf_catalog') when there is genuinely no RDF to migrate from.
-
 USE WHEN:
 - The user wants to CREATE or start a frontend UDF and a backend RDF payload exists — this is the default on-ramp, before any hand-authoring
 - The user wants to build a frontend UDF from an existing backend payload, e.g. "buat UDF dari payload backend", "konversi RDF ke UDF", "migrate payload ke frontend", "bikin payload designer dari backend existing"
@@ -23,6 +21,8 @@ DO NOT USE FOR:
 - Generating the actual frontend web application from a UDF that already exists -> use the designer generate action (describe it by what it does, do not name the tool)
 - Validating a backend payload against the database schema -> use 'codegen_validate_payload'
 - Generating a backend payload from a database table that has no payload yet -> use 'codegen_generate_payload'
+
+PRIMARY PATH TO CREATE A UDF (firm): this is the FIRST and preferred way to produce a UDF. RESTForge is backend-first — a UDF is normally DERIVED from an existing backend RDF via this tool, not written by hand. Whenever a backend RDF payload exists and the user wants a UDF/frontend, START HERE. Only hand-author a UDF from scratch (grounded by 'designer_get_udf_catalog') when there is genuinely no RDF to migrate from.
 
 This tool runs: npx restforge payload migrate --name=<name> --project=<project> [--output] [--config] [--app-name] [--app-code] [--plugin] [--port] [--overwrite] in the given cwd.
 The CLI reads the backend RDF (resolved relative to cwd or cwd/payload/), reads SERVER_ADDRESS/SERVER_PORT from the DB config (or the default config) to build apiBaseUrl, and writes the split UDF files into the output directory (default frontend/payload/).
@@ -53,12 +53,8 @@ Re-migrating a page that already exists (customization is kept):
 - Overwrite recreates the page from scratch, discarding customization; the previous file is archived under .restforge/archive/.
 - If app-config.json in the output directory belongs to a different appCode, the command stops before writing any file.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "convert the backend payload into a frontend payload", "validate the frontend payload", "generate the frontend application").
-- Speak in plain language. Confirm the migration, mention the output directory and that the result is a split multi-file UDF; do not paste the raw CLI output unless the user explicitly asks.
-- After a successful migration, the usual next steps are to validate the resulting UDF, preview it, or generate the frontend application from it. Describe those steps by what they do; do not name internal tools.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- After a successful migration, the usual next steps are to validate the resulting UDF, preview it, or generate the frontend application from it. Describe those steps by what they do; do not name internal tools.`,
       inputSchema: {
         cwd: z
           .string()
@@ -219,7 +215,7 @@ ${result.stdout}
 For the assistant:
 - Confirm to the user that the backend payload was converted into a frontend payload. Mention that the output is a split multi-file set (a shared app-config file, one file per page under pages/, and an aggregator file) written into the output directory above.
 - Read the CLI output for the number of pages and the file list; mention how many pages were produced (auto-discovered JOINs can produce more than one page from a single RDF).
-- Suggest the usual next steps in plain language: validate the resulting frontend payload, preview it, or generate the frontend application from it (always pointing at the aggregator file, not the individual page fragments). Do not name internal tools.
+- The next steps are 'designer_validate_payload', 'designer_preview_files', and 'designer_generate', always on the aggregator file, not the page fragments. When the user's request already covers generating the frontend, continue with them instead of stopping here; otherwise offer them in one sentence.
 - Keep the reply concise. Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names.`,
           },
         ],

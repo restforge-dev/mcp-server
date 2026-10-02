@@ -37,13 +37,7 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The config file (default 'db-connection.env') must exist in the project and contain valid
   database credentials. This tool does not pre-check that — if the CLI fails, the failure response
-  will surface the underlying cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "validate the payload files", "see the column-level differences", "sync the payload files").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+  will surface the underlying cause.`,
       inputSchema: {
         cwd: z
           .string()
@@ -155,7 +149,7 @@ ${result.stdout}
 
 For the assistant:
 - Read the Summary section in the CLI output above and tell the user how many payload files are OK, in DRIFT, or in ERROR.
-- If every file is OK, confirm in plain language that the payload files are still in sync with the database.
+- If every file is OK, confirm in plain language that the payload files are still in sync with the database. The next step is generating the endpoint module ('codegen_create_endpoint'). When the user's request already covers the endpoint, continue with it instead of stopping here; otherwise offer it in one sentence.
 - If any file is in DRIFT or ERROR, suggest as the next step that the user can see the column-level differences for the affected file (added, removed, or changed columns). Do not name the internal tool — describe it by what it does.
 - If the user later wants to apply those changes, mention that the next step is to update the payload files automatically (with the previous version archived). Describe this step in plain language; do not name the internal tool.
 - Keep the reply concise. Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names.`,

@@ -15,18 +15,16 @@ USE WHEN:
 - The user asks "what tables exist in the database?" or any equivalent question
 - Pertanyaan dalam bentuk seperti "tabel apa saja yang ada di database", "list table di database project", "show me the tables", "ada tabel apa aja"
 - Before authoring any SQL query (dashboard widget query, ad-hoc query, CRUD payload generation) and the table catalog is unknown — ground the query in the live database state instead of guessing
-- The user mentions a specific table name and the AI is unsure whether it actually exists in the project's database
-- The user is exploring an unfamiliar database before deciding what to build (e.g. picking a target table for a new endpoint or dashboard)
-- The user asks to filter by schema or namespace (e.g. "list tables in core schema only", "tabel di schema public saja")
-- The user asks for a read-only inspection without modifying anything
-- Before invoking 'codegen_describe_table' — to discover candidate table names first
+- Unsure whether a named table exists, or exploring an unfamiliar database before picking a target table
+- Filtering by schema or namespace ("tabel di schema public saja")
+- Before 'codegen_describe_table', to discover candidate table names
 
 DO NOT USE FOR:
 - Detailed column / primary key / foreign key / index information for a specific table -> use 'codegen_describe_table'
 - Listing payload spec files on the filesystem (the payload/ folder) -> use generic Read or filesystem tools
 - Validating whether a payload file is in sync with the database -> use 'codegen_validate_payload'
 - Querying the actual row data inside tables -> out of scope; this tool returns only the table catalog (names + type), not row content
-- Modifying the database schema (CREATE/ALTER/DROP TABLE) -> out of scope
+- Modifying the database schema (CREATE/ALTER/DROP TABLE) -> edit the SDF, then 'codegen_dbschema_migrate' or 'codegen_dbschema_apply'
 - Listing schemas or databases themselves -> out of scope; this tool returns the tables WITHIN a schema, not the schemas themselves
 
 This tool runs: npx restforge schema list --config=<config> --format=json [--schema=<schema>] [--include-system=<bool>] in the given cwd.
@@ -36,13 +34,9 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The config file (default 'db-connection.env') must exist in the project and contain valid database credentials. This tool does not pre-check that — if the CLI fails, the failure response will surface the underlying cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "list the database tables", "describe a specific table", "install the package").
-- Speak in plain language. Summarise the result (database type and total table count); do not paste the raw JSON unless the user explicitly asks.
+NOTES:
 - This is a live introspection: the tool actively queries the database catalog (information_schema in Postgres/MySQL, all_tables in Oracle). The result reflects the database state at query time.
-- Database type is auto-detected from the config file. The schema filter is dialect-aware (Postgres schema vs MySQL database vs Oracle owner) and uppercase is required for Oracle owners.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+- Database type is auto-detected from the config file. The schema filter is dialect-aware (Postgres schema vs MySQL database vs Oracle owner) and uppercase is required for Oracle owners.`,
       inputSchema: {
         cwd: z
           .string()

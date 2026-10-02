@@ -9,43 +9,24 @@ export function registerCodegenGetDashboardCatalog(server: McpServer): void {
     'codegen_get_dashboard_catalog',
     {
       title: 'Get Dashboard Catalog',
-      description: `Get authoritative JSON catalog of dashboard payload spec (payload shape with discriminator, widget structure with mutex \`query\`/\`queries\`, params contract with allowed types, scalar collapse rules, naming convention with \`dash-\` prefix, URL pattern \`POST /api/{project}/{name}/dashboard\`, file reference convention, placeholder convention with \`:paramName\`).
+      description: `Get the authoritative JSON catalog of the dashboard payload spec: payload shape and discriminator, widget structure with mutex \`query\`/\`queries\`, params contract and allowed types, scalar collapse rules, \`dash-\` naming prefix, URL pattern \`POST /api/{project}/{name}/dashboard\`, file references, and \`:paramName\` placeholders.
 
 USE WHEN:
-- The user asks about dashboard payload structure, widget definition, or how dashboard endpoints work
-- The user mentions specific dashboard concepts: \`widgets\`, \`params\`, \`query\` vs \`queries\`, scalar collapse, dashboard prefix \`dash-\`
-- Pertanyaan dalam bentuk seperti "bagaimana struktur payload dashboard", "apa beda dashboard dengan endpoint biasa", "kapan pakai query vs queries", "kenapa nama dashboard harus pakai dash-"
-- The user asks about the URL pattern for dashboard endpoints (\`POST /api/{project}/{name}/dashboard\`)
-- The user asks why dashboard names must start with \`dash-\` prefix
-- The user asks about response shape: when is value a scalar, when is it object, when is it array (scalar collapse rules)
-- The user asks about placeholder \`:paramName\` in widget SQL — declaration requirements, escaping (\`::\` Postgres cast)
-- Before authoring a dashboard payload manually (via Write tool) — to ground field naming, allowed/forbidden fields, widget structure
-- Before invoking 'codegen_validate_dashboard_payload' or 'codegen_create_dashboard' — to verify payload conforms to schema
-- The user is unsure whether their use case is a dashboard or a CRUD endpoint
+- The user asks about dashboard payload structure, widgets, params, \`query\` vs \`queries\`, scalar collapse, the \`dash-\` prefix, or placeholders ("bagaimana struktur payload dashboard", "kapan pakai query vs queries")
+- Before authoring a dashboard payload by hand, or before validating or generating one
+- The user is unsure whether the use case is a dashboard or a CRUD endpoint
 
 DO NOT USE FOR:
-- Validating an actual dashboard payload file -> use 'codegen_validate_dashboard_payload'
-- Generating a dashboard module from a payload -> use 'codegen_create_dashboard'
-- Looking up CRUD payload field validation rules -> use 'codegen_get_field_validation_catalog'
-- Looking up CRUD query declarative spec (\`datatablesQuery\`, \`viewQuery\`, \`viewName\`, \`exportQuery\`, \`detailQuery\`) -> use 'codegen_get_query_declarative_catalog'
-- Generating a CRUD payload from a database table -> use 'codegen_generate_payload'
-- Validating CRUD payload drift against the database -> use 'codegen_validate_payload'
-- Common widget patterns examples (Metric+Donut, Metric+Sparkline, Metric+Goal) — not in catalog scope; refer to the documentationUrl returned in the response
-- Frontend integration examples (Metronic, AdminLTE, etc.) — not in catalog scope; refer to documentationUrl
-- Separation of Concerns rationale for forbidden frontend fields — not in catalog scope; refer to documentationUrl
-- Multi-database SQL dialect adaptation inside widget queries — not in catalog scope; refer to documentationUrl
-- Performance characteristics (Promise.allSettled execution, in-memory SQL embedding) — not in catalog scope; refer to documentationUrl
+- Validating a dashboard payload file -> 'codegen_validate_dashboard_payload'
+- Generating a dashboard module -> 'codegen_create_dashboard'
+- CRUD field validation rules -> 'codegen_get_field_validation_catalog'
+- CRUD query spec (\`datatablesQuery\`, \`viewQuery\`, \`exportQuery\`, \`detailQuery\`) -> 'codegen_get_query_declarative_catalog'
+- Widget pattern examples, frontend integration, SQL dialect adaptation, performance notes -> not in catalog scope; use the documentationUrl in the response
 
-This tool runs: npx restforge catalog dashboard in the given cwd.
-The catalog is sourced from restforge (single source of truth) so it stays in sync with
-the restforge runtime version installed in the project.
+This tool runs: npx restforge catalog dashboard in the given cwd. The catalog is sourced from restforge (single source of truth), so it matches the installed runtime version.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "look up the dashboard catalog", "edit the dashboard payload", "install the package").
-- Speak in plain language. Summarise the catalog (number of allowed top-level fields, forbidden frontend fields, param types, scalar collapse rules); do not paste the entire JSON unless the user explicitly asks for it.
-- When the user is unsure whether their use case is dashboard or CRUD, briefly explain the discriminator: \`widgets\` array means dashboard (multi-query aggregator), \`tableName\` means CRUD (single-table REST endpoint). They cannot mix.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Dashboard vs CRUD discriminator: a \`widgets\` array means dashboard (multi-widget aggregation, POST .../dashboard); \`tableName\` + \`fieldName\` + \`action\` means a CRUD endpoint.`,
       inputSchema: {
         cwd: z
           .string()

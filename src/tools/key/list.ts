@@ -23,12 +23,7 @@ This tool runs: npx restforge key list [--show-full] [--dir] in the given cwd.
 SECURITY NOTE: by default keys are shown MASKED. 'showFull' reveals the full secret key values in this tool's output — only enable it when the user explicitly asks, and avoid repeating full keys back to the user.
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "list the API keys").
-- Summarise how many keys are present and where; keep masked values masked. Do not paste full key values unless the user explicitly asked and 'showFull' was used.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The project must have @restforgejs/platform installed in node_modules.`,
       inputSchema: {
         cwd: z
           .string()

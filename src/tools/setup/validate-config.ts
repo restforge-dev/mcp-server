@@ -39,12 +39,8 @@ Without 'autoCreateDb' this tool is READ-ONLY and safe to call repeatedly.
 
 About 'autoCreateDb' (postgres/mysql only): when the target database does not exist yet, the CLI normally offers to create it. In this non-interactive context the CLI skips the creation and prints a hint that names the --auto-create-db flag. Setting autoCreateDb=true makes the CLI create the database instead, which is a WRITE operation on the database server — ask the user before enabling it. After a successful creation the CLI asks for a re-run, so validation has to be repeated to confirm the remaining components. The flag has no effect for sqlite (the file is created on first connect) or oracle (a service name, not a database), and the DB_USER needs the CREATE DATABASE privilege.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "fill in the credentials", "update a single value", "set up the initial config").
-- Speak in plain language. Summarise the validation result by component (license, database, optional redis/kafka); do not paste the raw CLI output unless the user explicitly asks.
-- The CLI output may contain license fragments, host names, or user names. Do not echo license keys, passwords, or full connection URIs into chat. Confirm validation status only.
-- When a precondition is not met (e.g. config file is missing), frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- The CLI output may contain license fragments, host names, or user names. Do not echo license keys, passwords, or full connection URIs into chat. Confirm validation status only.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z

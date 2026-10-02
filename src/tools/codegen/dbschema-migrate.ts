@@ -9,25 +9,22 @@ export function registerCodegenDbschemaMigrate(server: McpServer): void {
     'codegen_dbschema_migrate',
     {
       title: 'Migrate dbschema-kit Files to Database',
-      description: `Apply dbschema-kit definition files to a live database (load -> validate -> generate DDL -> apply via dialect driver), by wrapping restforge schema migrate. This is the only tool in the dbschema-kit family that MUTATES a live database. The DESTRUCTIVE annotation is set deliberately: with drop=true, all data in the affected tables is destroyed before recreation.
+      description: `Apply dbschema-kit definition files to a live database (load -> validate -> generate DDL -> apply via dialect driver), by wrapping restforge schema migrate. Intended for an empty database or a deliberate drop-and-recreate.
+
+DESTRUCTIVE: MUTATES a live database and has no rollback; DDL already executed stays applied. ALWAYS confirm with the user before dryRun=false; the safe first call is dryRun=true. With drop=true ALL DATA in the affected tables is destroyed: confirm explicitly and name the tables. When the config points to production, recommend dry-run plus manual review first. For an existing database with data, prefer 'codegen_dbschema_diff' then 'codegen_dbschema_apply'.
 
 USE WHEN:
-- The user explicitly asks to apply schema to a database, "deploy schema", "migrate schema ke DB"
-- Pertanyaan dalam bentuk: "create tables di postgres", "apply DDL ke MySQL", "buat schema di production DB"
-- Schema-driven development workflow finalisation
-- After validating schema (codegen_dbschema_validate) and the user confirmed apply
-- Initial DB setup for a new project
-- The user wants dry-run first to preview DDL — pass dryRun=true (safe path)
-- The user wants to drop and recreate tables (DESTRUCTIVE) — pass drop=true with explicit user confirmation
-- After 'codegen_dbschema_introspect' followed by edits, to apply the modified schema
+- The user asks to apply the schema to a database ("migrate schema ke DB", "create tables di postgres", "apply DDL ke MySQL")
+- Initial database setup, after 'codegen_dbschema_validate' passed and the user confirmed
+- A DDL preview against the target database -> dryRun=true (safe path)
+- A deliberate drop-and-recreate -> drop=true, only with explicit user confirmation
 
 DO NOT USE FOR:
-- Generating DDL without applying -> use 'codegen_dbschema_generate_ddl'
-- Validating schema correctness -> use 'codegen_dbschema_validate'
-- Listing live tables -> use 'codegen_list_tables'
-- Querying data -> out of scope
-- Incremental ALTER migration — this tool does full apply only. For incremental migrations, suggest a manual SQL migration script.
-- Production database without explicit user authorisation — DESTRUCTIVE; never proceed without confirmation.
+- Changing tables that already exist (add columns, indexes, FKs) -> 'codegen_dbschema_diff' then 'codegen_dbschema_apply'
+- Generating DDL without applying -> 'codegen_dbschema_generate_ddl'
+- Validating schema correctness -> 'codegen_dbschema_validate'
+- Listing live tables -> 'codegen_list_tables'
+- A production database without explicit user authorisation
 
 This tool runs: npx restforge schema migrate --schema-path=<path> --config=<file> [--drop=<bool>] [--dry-run] [--max-name-length=<N>] [--auto-create-db] in the given cwd.
 The CLI auto-detects the dialect from the config file (DB_TYPE=postgresql|mysql|oracle|sqlite). The CLI exits 0 on success for BOTH a real apply and a dry-run preview (the legacy exit code 2 for dry-run has been removed); any non-zero exit is an error. This tool distinguishes a dry-run preview from a real apply by the dryRun parameter, not by the exit code.
@@ -38,16 +35,8 @@ Preconditions:
 - The config file (default 'db-connection.env') must exist and contain valid database credentials.
 - Schema files must exist at the given path and pass validation. The --schema-path flag is required by the CLI.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "apply the schema", "preview the DDL", "drop and recreate the tables").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- This tool MUTATES a live database. ALWAYS confirm with the user before invoking with dryRun=false. The default safe path is dryRun=true (preview only).
-- When the user uses drop=true, ALL DATA in the affected tables is destroyed. Confirm explicitly that the user understands this — quote the tables that will be dropped if known.
-- Production database operations should be opt-in. If the config points to production (verify by reading DB_HOST or similar), strongly suggest dry-run + manual review first.
-- There is no rollback on failure mid-migration — DDL changes that already executed are NOT automatically reverted. Plan for forward-fix only.
-- The user must specify --schema-path (e.g. './schema'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- The user must specify --schema-path (e.g. './schema'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.`,
       inputSchema: {
         cwd: z
           .string()
@@ -249,7 +238,8 @@ For the assistant:
 - Confirm to the user that the migration was applied. Read the CLI output above and mention the database type and the count of tables/indexes/foreign keys created (when present).${autoCreateNote}
 - This is a DESTRUCTIVE operation: tables, indexes, and foreign keys were created in the live database. With drop=true, existing tables and their data were also removed before recreation.
 - The user should verify the database state matches expectation. Suggest listing tables (read-only) for confirmation.
-- For follow-up changes, the user authors updated schema files and reruns the migrate action. Caution: there is no incremental ALTER migration in this version — full apply only. Schema-driven incremental migration is out of scope.
+- For later changes to these tables, edit the schema files, then use 'codegen_dbschema_diff' and 'codegen_dbschema_apply' (incremental ALTER) instead of migrating again.
+- The next step is generating the RDF payload per table ('codegen_generate_payload'). When the user's request already covers the API, continue with it instead of stopping here; otherwise offer it in one sentence.
 - There is no rollback on partial failure — if a future migration fails mid-way, DDL that already executed is NOT automatically reverted.
 - Do not paste the raw CLI output unless the user explicitly asks.
 - Match the user's language.`,

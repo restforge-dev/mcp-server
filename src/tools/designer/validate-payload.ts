@@ -35,13 +35,7 @@ Cross-reference (grounding & on-ramp):
 
 Preconditions:
 - RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "validate the UI definition", "preview the generated files", "generate the frontend code").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
       inputSchema: {
         cwd: z
           .string()
@@ -160,7 +154,7 @@ ${result.stdout}
 ${stderrBlock}
 For the assistant:
 - The Designer CLI ran to completion. Read the CLI output above and classify the result:
-  (a) Positive result — the payload is VALID against the target plugin schema. Confirm this in plain language and suggest the next step: preview the files that would be generated from this payload, or generate the frontend code. Describe steps by what they do.
+  (a) Positive result — the payload is VALID against the target plugin schema. Confirm this in plain language. The next step is 'designer_preview_files' and then 'designer_generate' on the same aggregator file. When the user's request already covers generating the frontend, continue with it instead of stopping here; otherwise offer it in one sentence.
   (b) Actionable negative verdict — the payload is INVALID (the output lists structural errors), or the payload file was not found, or the target plugin / plugins directory could not be resolved. These are legitimate results to RELAY to the user, not tool malfunctions. Summarise the concrete problems (which fields, components, or paths are wrong) and offer to re-check after the user fixes them.
 - A non-zero exit code here means the CLI reported a negative verdict (case b), NOT that the tool failed. Never tell the user "the tool failed" for case (b).
 - Do not paste the raw CLI output unless the user explicitly asks. Do not mention internal tool names. Match the user's language.`,

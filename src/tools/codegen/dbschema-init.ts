@@ -36,13 +36,9 @@ Preconditions:
 - The target file must NOT already exist (CLI fails otherwise — the user can pick a different name or remove the existing file first).
 - The parent folder of the target path must exist (CLI does not create intermediate folders).
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "create a starter schema file", "look up the schema catalog", "validate the schema").
-- Speak in plain language. Confirm the file was created and mention its path; do not paste the raw CLI output unless the user explicitly asks.
+NOTES:
 - The draft holds only the generic dummy columns. Tell the user to rename the table and replace the sample columns with the real domain fields.
-- If the user wants multiple files (e.g. category.js, supplier.js, customer.js), invoke this action once per file. Do not assume one call covers multiple files.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+- If the user wants multiple files (e.g. category.js, supplier.js, customer.js), invoke this action once per file. Do not assume one call covers multiple files.`,
       inputSchema: {
         cwd: z
           .string()

@@ -12,6 +12,8 @@ export function registerDesignerAuthRemove(server: McpServer): void {
 signup.html, js/rfx_auth.js, strips the auth guard from all app pages, and removes the
 embeddedAuth marker from payload/app-config.json.
 
+DESTRUCTIVE: deletes the auth files and strips the guard from every page. ALWAYS confirm with the user before calling, naming the project and what will be deleted.
+
 USE WHEN:
 - The user wants to remove/uninstall embedded auth from a frontend project
 - The user asks things like "hapus auth frontend", "uninstall rfx_auth", "cabut auth embedded",
@@ -42,10 +44,7 @@ Preconditions:
 - RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks
   that by running 'npx restforge-designer --version'.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
-- ALWAYS confirm with the user before calling this tool (list project name, what will be deleted).
+NOTES:
 - Summarise what was removed: files deleted, pages unguarded, marker removed.
 - When auth was not installed (no-op), tell the user clearly.`,
       inputSchema: {

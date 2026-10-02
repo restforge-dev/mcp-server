@@ -40,14 +40,10 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules, in a version that provides the 'query validate' sub-command (confirmed present in 5.5.5; the exact minimum version is not established).
 - The config file (default 'db-connection.env') must exist in the project (or in cwd/config/) and contain valid database credentials. The CLI auto-fallbacks to the config/ subfolder if the file is not found at the top level.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "validate the SQL", "list the database tables").
-- Speak in plain language. For success: confirm the SQL is valid in one sentence. For failure: summarise the error category in plain language (e.g. "the column 'x' doesn't exist in this table"), and suggest the next action (revise SQL based on error, re-validate).
+NOTES:
 - This is a live introspection: the tool actively runs EXPLAIN against the database. The result reflects the database state at query time. Zero rows are executed; the planner only parses and resolves references.
 - For SELECT-only rejection (when the SQL starts with INSERT/UPDATE/DELETE/etc), explain that the validator is read-only by design and ask the user to revise to a SELECT statement.
-- Error codes are dialect-specific: Postgres uses 5-char SQLSTATE (e.g. '42703'), MySQL uses ER_* names or numeric errno, Oracle uses 'ORA-XXXXX'. When relevant, mention the category in plain language (column not found, ambiguous reference, function mismatch, etc) instead of citing the raw code.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+- Error codes are dialect-specific: Postgres uses 5-char SQLSTATE (e.g. '42703'), MySQL uses ER_* names or numeric errno, Oracle uses 'ORA-XXXXX'. When relevant, mention the category in plain language (column not found, ambiguous reference, function mismatch, etc) instead of citing the raw code.`,
       inputSchema: {
         cwd: z
           .string()

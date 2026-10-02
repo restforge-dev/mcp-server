@@ -34,66 +34,36 @@ export function registerCodegenCreateDashboard(server: McpServer): void {
     'codegen_create_dashboard',
     {
       title: 'Create Dashboard Module',
-      description: `Generate a multi-widget dashboard endpoint module from a payload spec by wrapping restforge dashboard. URL pattern produced: POST /api/{project}/{name}/dashboard.
+      description: `Generate a multi-widget dashboard endpoint module from a dashboard payload (a 'widgets' array of SQL aggregations, no table, no CRUD actions) by wrapping restforge dashboard. URL pattern produced: POST /api/{project}/{name}/dashboard.
 
-Dashboards differ structurally from CRUD endpoints: there is no table, no fieldValidation, no CRUD actions. The payload declares a 'widgets' array — each widget owns SQL aggregation queries that are embedded into the generated module file and executed in parallel at request time, returning a JSON envelope keyed by widget id.
-
-This tool is DESTRUCTIVE: it spawns the CLI which writes / overwrites files in 'src/modules/<project>.js' and 'src/modules/<project>/<name>.js', plus 'metadata/<project>/<name>.json' and updates '.restforge/projects.json'. Single-call semantics: the tool always executes; there is no preview mode. To check a payload without writing anything, run 'codegen_validate_dashboard_payload' first.
-
-The 'force' parameter controls the overwrite gate and defaults to TRUE, which reproduces the previous behaviour: an existing dashboard module IS overwritten (the CLI archives the previous version first — see the safety net below). Passing force=false gives a non-overwrite path. Unlike 'codegen_create_endpoint', the dashboard command never asks an interactive y/N question: every conflict on the non-force path ends in a clean error with a non-zero exit code, reported by this tool as a failure.
-- When nothing conflicts, the CLI generates normally — same result as force=true.
-- When the dashboard module file already exists, the CLI stops with "Dashboard module already exists at '<path>'. Pass options.force=true to overwrite." and writes nothing.
-- When the project is already registered with a different database type, the CLI stops with "Cannot change to '<db>' without --force." and writes nothing.
-- The shared main module 'src/modules/<project>.js' is left alone when it already exists; the CLI skips it instead of failing, on both paths.
-Consequence of the default worth knowing: with force=true the CLI re-registers the project under whatever 'database' value this call carries, replacing the dialect recorded earlier in '.restforge/projects.json' without warning. Use force=false when the goal is to find out whether the dashboard already exists, or when the registered database type must not change.
-
-Safety net: when the CLI overwrites an existing dashboard module, it FIRST renames the previous version to '<name>.archive.NNN' (NNN is a sequential generation number starting at 001) inside the same folder. Rollback by restoring the most recent archive is always possible.
-
-Database type: the 'dashboard create' CLI handler resolves the dialect with a plain default only — the value of '--database' when given, otherwise postgres. It does NOT read DB_TYPE from the active config, so there is no auto-detection to fall back on here (this differs from 'codegen_create_endpoint', which does auto-detect). Ask for or infer the project's actual database and pass it whenever the project is not postgres; the dialect is baked into the SQL of the generated module.
-
-AI responsibility — IMPORTANT: because this tool always executes and, with the default force=true, may overwrite generated files, you MUST confirm intent with the user in plain language BEFORE invoking the tool. You do NOT need to detect file conflicts programmatically — the CLI handles that and the archive mechanism keeps the previous version safe. Just confirm intent. Examples of good confirmation phrasing in user-facing chat:
-- "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, versi sebelumnya akan disimpan sebagai '.archive.NNN'. Lanjut?"
-- "I will generate <name> under project <project>. Existing files will be archived as .archive.NNN before being overwritten. Proceed?"
+DESTRUCTIVE: with the default force=true an existing dashboard module is overwritten (the CLI first copies the previous module to '.restforge/archive/<run>/') and the project is re-registered under this call's 'database' value. There is no preview; check the payload with 'codegen_validate_dashboard_payload' first. Confirm intent with the user BEFORE calling, e.g. "Saya akan generate dashboard <name> di project <project>. Versi lama, bila ada, diarsipkan ke .restforge/archive. Lanjut?".
 
 USE WHEN:
-- The user asks to generate, create, or scaffold a dashboard endpoint, multi-widget aggregator, or analytics endpoint (e.g. "buatkan dashboard X di project Y", "generate dashboard sales", "scaffold dashboard inbound dengan payload Z")
-- The user mentions "dashboard", "widget aggregator", "multi-widget", "POST .../dashboard", or terms like "donut breakdown", "metric card", "sparkline" in the context of generating an endpoint
-- The user has authored a payload file with a 'widgets' array (not a CRUD 'tableName' shape) and wants to materialise it as a runnable endpoint
-- Pertanyaan dalam bentuk: "buatkan dashboard X di project Y", "generate dashboard sales", "scaffold dashboard inbound dengan payload Z"
-- The user mentions the URL pattern POST /api/<project>/<name>/dashboard and wants to register it as runnable code
-- The user explicitly references dashboard concepts: scalar collapse rules, widget id, query versus queries, params contract, file:query/*.sql references inside widgets
-- After 'codegen_validate_payload' confirmed a dashboard-shape payload — this is the natural follow-up that turns it into runnable code
-- The user asks to regenerate an existing dashboard after the payload changed (overwrite + archive flow handled by the CLI)
+- The user asks to generate or scaffold a dashboard, multi-widget aggregator, or analytics endpoint ("buatkan dashboard sales di project Y", "generate dashboard inbound")
+- A payload with a 'widgets' array exists and the user wants it runnable, or wants it regenerated after the payload changed
 
 DO NOT USE FOR:
-- Generating a CRUD endpoint (payload has 'tableName', 'fieldName', 'action') -> use 'codegen_create_endpoint'
-- Generating the payload JSON itself from a database table -> use 'codegen_generate_payload' (note: codegen_generate_payload targets CRUD payloads — dashboard payloads are typically authored manually)
-- Validating a payload before generation -> use 'codegen_validate_payload'
-- Inspecting per-column differences between payload and database -> use 'codegen_diff_payload'
-- Syncing payload changes back into existing payload files after schema drift -> use 'codegen_sync_payload'
-- Looking up the field validation catalog (dashboards do not have field validation) -> use 'codegen_get_field_validation_catalog' only if discussing CRUD payload fields
-- Looking up the query declarative catalog (dashboards have their own query structure with widgets[].query and widgets[].queries) -> use 'codegen_get_query_declarative_catalog' only if discussing CRUD payload queries
-- Generating a processor (Kafka consumer, etc.) — out of scope; the CLI has separate 'processor' subcommand not covered by this MCP server yet
-- Deleting a dashboard or project — out of scope; the user must run 'npx restforge drop' manually
-- Changing widget visual presentation (widgetType, layout, color, title, subtitle) — those are frontend concerns and forbidden in the dashboard payload (separation of concerns); they belong in the frontend code, not in this generator
+- A CRUD endpoint (payload has 'tableName', 'fieldName', 'action') -> 'codegen_create_endpoint'
+- Checking a dashboard payload without writing -> 'codegen_validate_dashboard_payload'
+- Looking up the dashboard payload contract -> 'codegen_get_dashboard_catalog'
+- A processor -> 'codegen_create_processor'; deleting a project -> 'project_delete'
+- Widget presentation (widgetType, layout, color, title, subtitle): frontend concerns, forbidden in the payload
 
-Cross-reference: this tool is sibling of 'codegen_create_endpoint'. Both generate runnable code from payload JSON, but they consume different payload shapes (CRUD vs dashboard) and produce different artefacts (full module + model vs single dashboard module with embedded SQL).
+DATABASE TYPE: the CLI uses '--database' when given, otherwise postgres. It does NOT read DB_TYPE from the config (unlike 'codegen_create_endpoint'), so pass the project's real database whenever it is not postgres; the dialect is baked into the generated SQL.
+
+FORCE=FALSE: never prompts. When nothing conflicts it generates normally. When the module file exists the CLI stops with "Dashboard module already exists at '<path>'..." and writes nothing; when the project is registered under a different database type it stops with "Cannot change to '<db>' without --force.". The shared main module 'src/modules/<project>.js' is skipped, not failed, when it exists. Use force=false to find out whether the dashboard exists, or when the registered database type must not change.
+
+FILES: the CLI writes 'src/modules/<project>.js', 'src/modules/<project>/<name>.js', 'metadata/<project>/<name>.json', and updates '.restforge/projects.json'. An overwritten module is first copied to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept), so rollback is always possible.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist before calling this tool. The 'payload' value is handed to the CLI exactly as written, so it must carry the '.json' extension: the CLI looks for '<cwd>/payload/<payload>' and then '<cwd>/<payload>' and never appends an extension of its own.
-- The payload must follow the dashboard schema: a 'widgets' array (NOT a CRUD payload with 'tableName'). The CLI's DashboardValidator rejects payloads that mix shapes, declare forbidden frontend fields (widgetType, layout, title, subtitle, color), have widgets without 'id', have duplicate widget ids, declare both 'query' AND 'queries' in the same widget, declare neither, or use placeholders not declared in 'params'.
-- The dashboard name MUST start with 'dash-' prefix (e.g. dash-sales, dash-inbound). The prefix is required by the CLI and becomes part of the URL segment.
+- The 'payload' value is passed verbatim and must carry '.json': the CLI looks for '<cwd>/payload/<payload>' then '<cwd>/<payload>'.
+- The payload must follow the dashboard schema. The CLI's DashboardValidator rejects mixed CRUD shapes, forbidden frontend fields, widgets without 'id', duplicate ids, a widget with both or neither of 'query' and 'queries', and placeholders not declared in 'params'.
+- The dashboard name MUST start with 'dash-' (e.g. dash-sales); the prefix becomes part of the URL.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "the dashboard generator", "validate the payload first", "draft the payload first").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- This tool is destructive on its default path: it can overwrite an existing dashboard module file. BEFORE invoking this tool, ALWAYS confirm with the user in plain language. Example: "Saya akan generate dashboard <name> di project <project>. Kalau modul lama sudah ada, akan ditimpa (versi sebelumnya disimpan sebagai .archive.NNN). Lanjut?". Do not detect conflicts programmatically; the CLI handles that and creates the archive.
-- When the user only wants to know whether the dashboard already exists, or explicitly refuses an overwrite, call with force=false: the CLI then stops with a clean error instead of writing, and this tool surfaces that error.
-- After the tool runs, summarise the result. Surface the resulting endpoint URL (POST /api/<project>/<name>/dashboard) so the user knows where to call it. Read the CLI output and identify any archive activity using the '.archive.NNN' filesystem convention; surface to the user when archives exist.
-- If the user is confused about the difference between a dashboard and a CRUD endpoint: dashboards aggregate data from multiple SQL queries (widgets) and return a JSON envelope with widget keys; CRUD endpoints expose actions like /datatables, /read, /create, /update, /delete on a single table. Suggest the right tool based on what the user is actually building.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- After the run, surface the endpoint URL (POST /api/<project>/<name>/dashboard) and any archive activity ('.restforge/archive/<run>/').
+- Dashboard vs CRUD: a dashboard aggregates several SQL queries into a JSON envelope keyed by widget id; a CRUD endpoint exposes /datatables, /read, /create, /update, /delete on one table.`,
       inputSchema: {
         cwd: z
           .string()
@@ -132,12 +102,12 @@ PRESENTATION GUIDANCE:
         force: z
           .boolean()
           .default(true)
-          .describe("Default true — the existing behaviour: overwrite an existing dashboard module (the CLI archives the previous version as .archive.NNN first) and re-register the project under the 'database' value of this call. Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but an existing dashboard module or a different registered database type makes the CLI stop with a clean error and write nothing. The dashboard command has no interactive prompt, so force=false never hangs the call."),
+          .describe("Default true — the existing behaviour: overwrite an existing dashboard module (the CLI first copies the previous module to .restforge/archive/<run>/) and re-register the project under the 'database' value of this call. Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but an existing dashboard module or a different registered database type makes the CLI stop with a clean error and write nothing. The dashboard command has no interactive prompt, so force=false never hangs the call."),
       },
       annotations: {
         title: 'Create Dashboard Module',
         readOnlyHint: false,    // tool spawns CLI that writes module/metadata files and updates the registry
-        destructiveHint: true,  // can overwrite an existing dashboard module file (CLI archives it as .archive.NNN first)
+        destructiveHint: true,  // can overwrite an existing dashboard module file (CLI archives it to .restforge/archive/<run>/ first)
         idempotentHint: false,  // re-running creates new archive files
       },
     },
@@ -277,7 +247,7 @@ For the assistant:
   * 'Payload file not found' — the CLI resolves the payload argument verbatim; check that the name includes the '.json' extension and that the file sits in the payload/ folder.
 ${force
   ? "- The call ran with the default force=true, so an overwrite was allowed; a conflict message is therefore not the cause here."
-  : "- The call ran with force=false. Two failures are expected on that path and mean nothing was written: 'Dashboard module already exists ... Pass options.force=true to overwrite' and \"Cannot change to '<db>' without --force\". In either case tell the user that the existing files are untouched, and offer the two real options: pick a different dashboard name, or regenerate deliberately with overwrite enabled (the previous version is archived as '.archive.NNN')."}
+  : "- The call ran with force=false. Two failures are expected on that path and mean nothing was written: 'Dashboard module already exists ... Pass options.force=true to overwrite' and \"Cannot change to '<db>' without --force\". In either case tell the user that the existing files are untouched, and offer the two real options: pick a different dashboard name, or regenerate deliberately with overwrite enabled (the previous version is archived to '.restforge/archive/<run>/')."}
 - Do not paste the raw stdout/stderr unless the user explicitly asks. Do not mention internal tool names.
 - Offer to retry once the underlying issue is resolved.`,
             },
@@ -315,7 +285,7 @@ ${result.stdout}
 For the assistant:
 - Confirm to the user in plain language that the dashboard endpoint was generated. Mention the project, dashboard name, and the resulting URL: POST /api/${project}/${name}/dashboard.
 - Do not paste the entire CLI output unless the user explicitly asks; summarise instead.
-- Read the CLI output to identify any archive activity (the CLI uses the '.archive.NNN' naming convention in the filesystem and reports archive activity in its output, but the exact phrasing may evolve). When archives are created, tell the user that the previous version of the dashboard module is preserved in case rollback is needed.
+- Read the CLI output to identify any archive activity (the previous module is copied to '.restforge/archive/<run>/<original relative path>'; the 5 most recent runs are kept). When archives are created, tell the user that the previous version of the dashboard module is preserved in case rollback is needed.
 - Suggest natural follow-up actions appropriate to context: review the generated module, run the project to test the new dashboard endpoint, draft a frontend caller, etc. Do not mention internal tool names.
 - Match the user's language.`,
           },

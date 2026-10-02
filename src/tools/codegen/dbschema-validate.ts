@@ -9,53 +9,39 @@ export function registerCodegenDbschemaValidate(server: McpServer): void {
     'codegen_dbschema_validate',
     {
       title: 'Validate dbschema-kit Files',
-      description: `Validate dbschema-kit schema definition files (single-model + cross-model) by wrapping restforge schema validate. Single-model checks: defineModel structure, field types, length, nullable, primary key, default value compatibility. Cross-model checks: foreign key target table existence, referenced column existence, primary key requirement for belongsTo relations.
-
-Validation also covers the soft-delete contract. The softDelete block is strict: keys other than enabled and reusable are rejected. The three contract columns (is_deleted boolean, deleted_at timestamp, deleted_by string) are biconditional with softDelete.enabled = true — missing columns, wrong types, or columns declared without enabled=true are all ERRORs. Each reusable entry must reference a declared string/text field with a single-column UNIQUE and a physical length >= base length + 38; with soft-delete enabled, composite UNIQUEs and non-string single-column UNIQUEs are rejected. These checks run at schema load (inside defineModel), so they are enforced identically by every schema command that loads SDF files (validate, generate-ddl, migrate), not only by this tool.
+      description: `Validate dbschema-kit schema definition files (SDF) by wrapping restforge schema validate: single-model checks (defineModel structure, field types, length, nullable, primary key, default compatibility) and cross-model checks (FK target table and column, PK for belongsTo). With 'config' it also compares each model with the live database.
 
 USE WHEN:
-- The user asks to validate schema files or check defineModel correctness
-- Pertanyaan dalam bentuk: "validasi schema saya", "check apakah schema valid", "verify dbschema files", "cek schema definition"
-- After authoring or editing schema files (via Write/Edit tools) — to confirm correctness before downstream actions
-- Before invoking 'codegen_dbschema_generate_ddl' or 'codegen_dbschema_migrate' — to catch errors early
-- The user reports an unclear error message from another dbschema action and wants a focused validation check
-- The user asks about FK target validity ("does my FK reference work", "is the relation correct")
-- The user wants a sanity check after introspecting from a live database (after 'codegen_dbschema_introspect')
-- The user wants one verdict per table that also covers the database ("is my schema valid and in sync with the database?", "cek schema sekaligus kesesuaian dengan database") -> pass config
+- The user asks to validate schema files ("validasi schema saya", "cek apakah schema valid")
+- Right after authoring or editing schema/<table>.js, before generating DDL or migrating
+- The user asks whether an FK or relation is correct, or wants a check after introspection
+- The user wants one verdict per table that also covers the database ("schema valid dan sesuai database?") -> pass config
 
 DO NOT USE FOR:
-- Validating CRUD payload files -> use 'codegen_validate_payload'
-- Validating dashboard payload -> use 'codegen_validate_dashboard_payload'
-- Validating SQL syntax -> use 'codegen_validate_sql'
-- Looking up valid syntax -> use 'codegen_get_dbschema_catalog'
-- Generating or applying DDL -> use 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate'
-- Detailed per-column drift report against the database -> use 'codegen_dbschema_diff'
-
-This tool runs: npx restforge schema validate --schema-path=<path> [--config=<file>] [--table=<name>] [--json] in the given cwd.
-The CLI loads each file in the path (file or folder), runs single-model checks first, then cross-model checks, and reports per-file status.
+- CRUD payload (RDF) files -> 'codegen_validate_payload'; dashboard payloads -> 'codegen_validate_dashboard_payload'
+- SQL statements -> 'codegen_validate_sql'
+- Syntax lookup -> 'codegen_get_dbschema_catalog'
+- Generating or applying DDL -> 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_apply'
+- A detailed per-column drift report -> 'codegen_dbschema_diff'
 
 TWO MODES:
-- File only (config omitted): validates the SDF files and cross-model relations. The database is not contacted. The project's default config (set via config set-default) is NOT used, so omitting config always means file-only mode.
-- File and database (config given): validates the files, then compares each model with the table structure in the database. One verdict per model: [OK] (valid and in sync), [DRIFT] (valid, but columns, types, indexes, uniques, or FKs differ), [ERROR] with a category: table-missing (table not created yet; migrate or apply fixes it) or sdf-invalid (the file failed validation and was not compared; fix the file).
+- File only (config omitted): validates the files and cross-model relations; the database is not contacted. The project's default config is NOT used, so omitting config always means file-only.
+- File and database (config given): validates the files, then compares each model with its table. One verdict per model: [OK] (valid and in sync), [DRIFT] (valid, but columns, types, indexes, uniques, or FKs differ), [ERROR] with category table-missing (not created yet; migrate or apply fixes it) or sdf-invalid (file failed validation, not compared).
 
-The table parameter limits the report to one table in both modes. All files in the path are still loaded because FK validation needs the target models. Relation issues are reported under the table that owns the relation.
+The table parameter limits the report to one table in both modes. All files are still loaded because FK validation needs the target models; relation issues are reported under the owning table.
+
+SOFT-DELETE: the softDelete block is strict (only enabled and reusable). The three contract columns (is_deleted boolean, deleted_at timestamp, deleted_by string) are biconditional with softDelete.enabled = true; missing columns, wrong types, or columns without enabled=true are ERRORs. Each reusable entry must reference a declared string/text field with a single-column UNIQUE and physical length >= base length + 38; with soft-delete enabled, composite UNIQUEs and non-string single-column UNIQUEs are rejected. These checks run at schema load, so validate, generate-ddl, and migrate enforce them identically.
+
+This tool runs: npx restforge schema validate --schema-path=<path> [--config=<file>] [--table=<name>] [--json] in the given cwd.
 
 EXIT CODE SEMANTICS:
 - Exit 0 = everything OK.
-- Exit 1 = validation errors (file-only mode), or at least one DRIFT/ERROR verdict (file and database mode). In file and database mode this is a meaningful result, not a tool failure.
+- Exit 1 = validation errors (file-only), or at least one DRIFT/ERROR verdict (file and database). In file and database mode this is a meaningful result, not a tool failure.
 - Exit 2 = config invalid, database connection failed, or the table name is not in the SDF.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The schema path must exist. If the CLI fails because the folder is missing, the failure response surfaces the underlying cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "validate the schema files", "look up the schema catalog", "generate the DDL").
-- Speak in plain language. Summarise the result; do not paste the raw CLI output unless the user explicitly asks.
-- Validation covers two layers: single-model (struct, types, constraints) and cross-model (FK target tables and columns). A model can be single-valid but fail cross-model if its FK target does not exist.
-- The user must specify --schema-path (e.g. './schema' or 'schema/users.js'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- --schema-path is mandatory (e.g. './schema' or 'schema/users.js'); the CLI has no default. Confirm the path with the user when it was not mentioned.`,
       inputSchema: {
         cwd: z
           .string()
@@ -222,7 +208,7 @@ For the assistant:
 - Confirm to the user that all schema files are valid. If the CLI output lists per-file status lines or [OK] verdicts, count them and mention the count in plain language.
 - The validation covers both single-model (type, length, nullable, primary key, default value) and cross-model (FK target table existence, referenced column existence). All layers passed.
 - In file and database mode, every compared table also matches the database structure.
-- Suggest the next step depending on user intent: list models for an overview, generate DDL for review, or apply via migrate.
+- The next step is applying the schema: 'codegen_dbschema_migrate' (dryRun first) for tables that do not exist yet, or 'codegen_dbschema_diff' then 'codegen_dbschema_apply' for an existing database. When the user's request already covers applying the schema, continue with it (the destructive-operation confirmation still applies); otherwise offer it in one sentence.
 - Do not paste the raw CLI output unless the user explicitly asks.
 - Match the user's language.`,
           },

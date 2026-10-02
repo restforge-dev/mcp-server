@@ -31,12 +31,8 @@ DO NOT USE FOR:
 
 This tool is READ-ONLY and safe to call repeatedly. Pass unmask=true to see real values of sensitive fields (use with care).
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "set up the initial config", "fill in the credentials", "update a single value", "validate the connection").
-- Speak in plain language. Summarise the result; do not paste the full KEY=value list unless the user explicitly asks for it.
-- Even when unmask=true, do not echo sensitive values (license keys, passwords) into chat unless the user explicitly asks. Prefer to confirm presence and length only.
-- When a precondition is not met (e.g. config file is missing), frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Even when unmask=true, do not echo sensitive values (license keys, passwords) into chat unless the user explicitly asks. Prefer to confirm presence and length only.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z

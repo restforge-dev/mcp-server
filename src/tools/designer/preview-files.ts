@@ -32,13 +32,7 @@ Cross-reference (grounding & on-ramp):
 
 Preconditions:
 - RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "preview the generated files", "validate the UI definition", "generate the frontend code").
-- Speak in plain language. Summarise the planned file list; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
       inputSchema: {
         cwd: z
           .string()

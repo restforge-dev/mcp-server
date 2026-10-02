@@ -163,14 +163,11 @@ Preconditions:
 - For pm2 mode: PM2 must be installed and running on the user machine.
 - For HTTP probe: 'port' must be provided alongside 'health_path'.
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names.
+NOTES:
 - Summarise the state in one sentence: running, dead_pid (stale), http_unreachable (process up but endpoint dead), or not_running.
 - For 'dead_pid': suggest the user run the stop launcher (or 'pm2 delete' for PM2 mode) to clean up before starting again.
 - For 'http_unreachable': process is alive but the HTTP probe failed — usually a config mismatch (wrong port or path) or server still booting. Suggest re-trying after a moment or checking server logs.
 - For 'not_running': the server isn't currently running. Suggest generating a launcher (if not already done) and asking the user to execute it.
-- Do not echo the JSON envelope unless explicitly asked.
 - The HTTP probe targets the local machine by default (127.0.0.1). If the server binds to a different address (SERVER_ADDRESS in .env), the user can pass host_address to override.`,
       inputSchema: {
         cwd: z

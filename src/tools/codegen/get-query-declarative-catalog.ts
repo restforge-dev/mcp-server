@@ -9,38 +9,21 @@ export function registerCodegenGetQueryDeclarativeCatalog(server: McpServer): vo
     'codegen_get_query_declarative_catalog',
     {
       title: 'Get Query Declarative Catalog',
-      description: `Get authoritative JSON catalog of query declarative spec (5 query properties, 7 endpoint resolution rules, file reference convention with database-specific placeholders) used in payload query declarations such as \`datatablesQuery\`, \`viewQuery\`, \`viewName\`, \`exportQuery\`, and \`masterDetail.detailConfig.detailQuery\`.
+      description: `Get the authoritative JSON catalog of the RDF query declarative spec (5 query properties, 7 endpoint resolution rules, \`file:\` reference convention with database-specific placeholders) used by \`datatablesQuery\`, \`viewQuery\`, \`viewName\`, \`exportQuery\`, and \`masterDetail.detailConfig.detailQuery\`.
 
 USE WHEN:
-- The user asks about query declaration in payload, query properties, or how endpoints resolve queries
-- The user mentions specific property names: \`datatablesQuery\`, \`viewQuery\`, \`viewName\`, \`exportQuery\`, \`detailQuery\`, atau \`masterDetail\`
-- Pertanyaan dalam bentuk seperti "bagaimana cara declare query di payload", "what's the difference between viewQuery and viewName", "kapan pakai viewName vs tableName"
-- The user asks about endpoint query resolution: "query apa yang dipakai untuk /datatables", "what query does /export use", "resolusi query untuk /read-composite"
-- The user asks about \`file:\` prefix convention or SQL file references in payload
-- The user asks about database placeholder differences (PostgreSQL \`$1\`, MySQL \`?\`, Oracle \`:1\`) in detailQuery or other file-referenced SQL
-- Before generating or editing query-related properties in payload JSON — to ground property naming, resolution priority, and file reference convention. Often called before 'codegen_generate_payload' for grounding the initial generation, or before manual editing of an existing payload. Sibling of 'codegen_get_field_validation_catalog' (catalog-style tool, different scope).
-- The user asks about master-detail composite read query setup (\`detailQuery\` placement, foreign key placeholder)
+- Before adding or editing a query property in payload/<name>.json, or writing a custom \`file:query/*.sql\` reference
+- The user asks how endpoints resolve queries ("query apa yang dipakai untuk /datatables", "beda viewQuery dan viewName")
+- The user asks about placeholders per database (PostgreSQL \`$1\`, MySQL \`?\`, Oracle \`:1\`) or the \`detailQuery\` of a master-detail read
 
 DO NOT USE FOR:
-- Validating actual payload files against the database schema -> use 'codegen_validate_payload'
-- Generating a payload from scratch -> use 'codegen_generate_payload'
-- Applying changes to payload files -> use 'codegen_sync_payload'
-- Validating fieldValidation array -> use 'codegen_get_field_validation_catalog'
-- Reading the active database connection config schema -> use 'setup_get_config_schema'
-- Auto SQL conversion details (PostgreSQL -> MySQL/Oracle) — not in catalog scope; refer to the documentationUrl returned in the response
-- Subquery wrapping behavior for JOIN/CTE queries — not in catalog scope; refer to documentationUrl
-- Master-detail full structure outside \`detailQuery\` (e.g. \`enabled\`, \`detailTable\`, \`foreignKey\`, \`detailConfig.tableName\`) — not in catalog scope; refer to documentationUrl
-- Use case examples and decision guides ("kapan pakai X vs Y") — refer to documentationUrl for narrative explanation
+- Validating payload files -> 'codegen_validate_payload'
+- Generating or syncing a payload -> 'codegen_generate_payload' / 'codegen_sync_payload' (the base \`datatablesQuery\` is already emitted as a \`file:\` reference)
+- Adding JOIN columns from a referenced table -> 'codegen_sync_payload' with expandFk=true
+- Field validation rules -> 'codegen_get_field_validation_catalog'
+- Auto SQL conversion, subquery wrapping, the full masterDetail structure, or decision guides -> not in catalog scope; use the documentationUrl in the response
 
-This tool runs: npx restforge catalog query-declarative in the given cwd.
-The catalog is sourced from restforge (single source of truth) so it stays in sync with
-the restforge runtime version installed in the project.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "look up the query catalog", "edit the query declaration", "install the package").
-- Speak in plain language. Summarise the catalog (number of query properties, endpoints, database placeholders); do not paste the entire JSON unless the user explicitly asks for it.
-- When a precondition is not met (e.g. the package is not installed), frame it as a question or next-step suggestion rather than an error.`,
+This tool runs: npx restforge catalog query-declarative in the given cwd. The catalog is sourced from restforge (single source of truth), so it matches the installed runtime version.`,
       inputSchema: {
         cwd: z
           .string()

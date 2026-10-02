@@ -21,12 +21,7 @@ DO NOT USE FOR:
 This tool runs: npx restforge config clear-default in the given cwd (no other flags).
 
 Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action.
-- Confirm the default was cleared. Note this is reversible by setting a default again. Keep it concise.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The project must have @restforgejs/platform installed in node_modules.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder (must have @restforgejs/platform installed)'),
       },

@@ -49,11 +49,8 @@ Preconditions:
 Note: Google Sign-In, the vanilla-js-auth plugin, and @restforgejs/auth (auth+RBAC) are out of
 scope — this command only manages the rfx_auth embedded flow.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
-- Summarise what was installed: which files were written and which pages got the auth guard.
-- When a precondition is not met, frame it as a next-step suggestion.`,
+NOTES:
+- Summarise what was installed: which files were written and which pages got the auth guard.`,
       inputSchema: {
         cwd: z
           .string()

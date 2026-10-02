@@ -36,10 +36,7 @@ RESTForge package into the new folder. // per §5.2
 This tool runs: fs.mkdir(<parentCwd>/<folderName>, { recursive: true })
 Output: absolute path of the created folder. Pass this path as 'cwd' to subsequent setup_* tools.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "install the package", "set up the initial config").
-- Speak in plain language. Confirm the folder was created and state the absolute path.
+NOTES:
 - When the folder already exists and force was not set, frame it as a choice or question, not as a hard error.`,
       inputSchema: {
         folderName: z

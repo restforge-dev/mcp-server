@@ -11,6 +11,8 @@ export function registerKeyRevoke(server: McpServer): void {
       title: 'Revoke API Key',
       description: `Revoke (remove) an API key from an .env file, by wrapping restforge key revoke.
 
+DESTRUCTIVE: removes the key from the named .env file immediately ('--yes' is always passed, no in-tool confirmation). Confirm the file and intent with the user BEFORE calling.
+
 USE WHEN:
 - The user wants to revoke, remove, or invalidate an API key, e.g. "revoke api key", "cabut key", "hapus api key dari .env"
 
@@ -20,16 +22,9 @@ DO NOT USE FOR:
 
 This tool runs: npx restforge key revoke --file=<file> --yes in the given cwd. The 'file' argument is REQUIRED (without it the CLI would drop into an interactive file picker, which cannot be answered here), and '--yes' is always passed to skip the confirmation prompt — so this tool revokes immediately without further confirmation.
 
-IMPORTANT — this is destructive: it removes the key from the named .env file. Confirm the file and intent with the user BEFORE calling this tool, because the revoke happens without an additional in-tool confirmation step.
-
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The named .env file must exist and contain a key. This tool does not pre-check it; the failure response surfaces the cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "revoke the API key").
-- Confirm which file the key was revoked from. Keep the reply concise.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The named .env file must exist and contain a key. This tool does not pre-check it; the failure response surfaces the cause.`,
       inputSchema: {
         cwd: z
           .string()

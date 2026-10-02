@@ -11,6 +11,8 @@ export function registerProjectDelete(server: McpServer): void {
       title: 'Delete Project',
       description: `Delete a project from the RESTForge registry, INCLUDING all of its endpoints, processors, dashboards, and consumers, by wrapping restforge project delete.
 
+DESTRUCTIVE and not reversible here: removes the whole project with every endpoint, processor, dashboard, and consumer, without an in-tool confirmation ('--yes' is always passed). ALWAYS confirm the exact project name and intent with the user BEFORE calling; list projects first when the name is uncertain.
+
 USE WHEN:
 - The user explicitly wants to delete/remove an entire project, e.g. "hapus project", "delete project", "remove project beserta isinya"
 
@@ -20,16 +22,9 @@ DO NOT USE FOR:
 
 This tool runs: npx restforge project delete --project=<project> --yes in the given cwd. '--yes' is always passed to skip the confirmation prompt (the prompt cannot be answered in this non-interactive context), so the deletion happens immediately.
 
-IMPORTANT — this is highly destructive and not reversible here: it removes the entire project and every endpoint, processor, dashboard, and consumer inside it. There is NO additional in-tool confirmation. ALWAYS confirm the exact project name and intent with the user BEFORE calling this tool; consider listing projects first to verify the name.
-
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The named project must exist in the registry. This tool does not pre-check it; the failure response surfaces the cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. Never mention internal tool names; describe the action (e.g. "delete the project").
-- Confirm what was deleted. Keep the reply concise.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The named project must exist in the registry. This tool does not pre-check it; the failure response surfaces the cause.`,
       inputSchema: {
         cwd: z
           .string()

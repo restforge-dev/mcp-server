@@ -151,6 +151,16 @@ export function registerRuntimeGenerateConsumerLauncher(server: McpServer): void
       title: 'Generate RESTForge Kafka Consumer Launcher',
       description: `Prepare a way to run the Kafka consumer runtime ('restforge-consumer') of a project. This tool does NOT run the consumer — it only writes files that the user executes themselves. Same two-step pattern as 'runtime_generate_launcher': this server prepares, the user runs. A consumer spawned from an AI session would die with the session; a script or PM2 process owned by the user's terminal survives it.
 
+USE WHEN:
+- The user asks to run/start a Kafka consumer, e.g. "jalankan consumer", "run the kafka consumer", "deploy consumer ke pm2"
+- Right after a consumer was generated with 'codegen_create_kafka_consumer' and the user asks how to run it
+- The user wants a production PM2 deployment for the consumers of a project
+
+DO NOT USE FOR:
+- Starting/stopping the consumer itself -> the user runs the generated script or 'pm2 start' themselves
+- The REST API server -> use 'runtime_generate_launcher' (different binary, different files)
+- Creating the consumer source code -> use 'codegen_create_kafka_consumer'
+
 MODES:
 - mode=host: writes a start/stop pair in the project root (file names are FIXED):
   * windows: consumer-start.bat, consumer-stop.bat
@@ -176,16 +186,6 @@ REQUIRED FLAGS AND ARGUMENT FORM:
 - '--license' / '--license-server' are deliberately NOT exposed: the license is read from
   the environment/config, same choice as 'runtime_generate_launcher'.
 
-USE WHEN:
-- The user asks to run/start a Kafka consumer, e.g. "jalankan consumer", "run the kafka consumer", "deploy consumer ke pm2"
-- Right after a consumer was generated with 'codegen_create_kafka_consumer' and the user asks how to run it
-- The user wants a production PM2 deployment for the consumers of a project
-
-DO NOT USE FOR:
-- Starting/stopping the consumer itself -> the user runs the generated script or 'pm2 start' themselves
-- The REST API server -> use 'runtime_generate_launcher' (different binary, different files)
-- Creating the consumer source code -> use 'codegen_create_kafka_consumer'
-
 Preconditions:
 - The cwd must exist.
 - 'config' must end with .env.
@@ -196,16 +196,11 @@ Preconditions:
   otherwise stop at an interactive overwrite prompt that this server cannot answer).
   'overwrite' maps to '--force' in pm2 mode only.
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names. Refer to the produced files by their visible names
-  (e.g. 'consumer-start.bat', 'deploy/ecosystem.config.js').
+NOTES:
 - Say plainly that this assistant does NOT start the consumer — the user runs it, so it
   keeps running after this session ends.
 - Remind the user that a Kafka broker must be reachable; the consumer exits otherwise.
-- For pm2 mode: PM2 must be installed globally first (npm install -g pm2). Do not auto-install.
-- Do not paste the JSON envelope unless explicitly asked; summarise location, files, how to
-  start and how to stop.`,
+- For pm2 mode: PM2 must be installed globally first (npm install -g pm2). Do not auto-install.`,
       inputSchema: {
         cwd: z
           .string()

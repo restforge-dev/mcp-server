@@ -21,13 +21,7 @@ DO NOT USE FOR:
 - Filling in credentials in db-connection.env -> use 'setup_write_env'
 
 This tool runs: npx restforge init in the given cwd.
-Output: config/db-connection.env (empty template).
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "install the package", "fill in the credentials").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+Output: config/db-connection.env (empty template).`,
       inputSchema: {
         cwd: z
           .string()

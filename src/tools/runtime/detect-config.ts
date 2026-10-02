@@ -24,12 +24,9 @@ DO NOT USE FOR:
 Preconditions:
 - The 'config/' folder must exist at <cwd>/config/. If missing, the precondition response will say so.
 
-PRESENTATION GUIDANCE:
-- Match the user's language.
-- Never mention internal tool names.
+NOTES:
 - When exactly one config file is found, proceed without asking. When multiple are found, ask the user which environment they want.
-- The filename is what gets passed as --config=<filename>; the runtime will resolve it relative to the config/ folder automatically.
-- When a precondition is not met (folder missing or empty), frame it as a question or next-step suggestion rather than an error.`,
+- The filename is what gets passed as --config=<filename>; the runtime will resolve it relative to the config/ folder automatically.`,
       inputSchema: {
         cwd: z
           .string()

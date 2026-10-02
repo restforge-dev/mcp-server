@@ -39,7 +39,20 @@ export function registerCodegenDbschemaApply(server: McpServer): void {
     'codegen_dbschema_apply',
     {
       title: 'Apply Schema Drift Incrementally via ALTER',
-      description: `Resolve schema drift from dbschema-kit SDF files to the live database via incremental ALTER TABLE statements, by wrapping restforge schema apply. This is the incremental complement of 'codegen_dbschema_diff' (which only detects drift) and the SAFE alternative to 'codegen_dbschema_migrate' with drop=true (which destroys and recreates tables). By default the apply is ADDITIVE-ONLY: ADD COLUMN, CREATE INDEX, ADD UNIQUE, and ADD FOREIGN KEY are emitted; every destructive change is skipped with a warning unless explicitly opted in (allowDrop for DROP COLUMN/INDEX/UNIQUE/FOREIGN KEY, allowModify for ALTER COLUMN length/nullable and FOREIGN KEY action changes).
+      description: `Resolve schema drift from dbschema-kit SDF files to the live database via incremental ALTER TABLE statements, by wrapping restforge schema apply. It is the safe alternative to 'codegen_dbschema_migrate' with drop=true. By default it is ADDITIVE-ONLY (ADD COLUMN, CREATE INDEX, ADD UNIQUE, ADD FOREIGN KEY); destructive changes are skipped with a warning unless opted in (allowDrop for DROP COLUMN/INDEX/UNIQUE/FOREIGN KEY, allowModify for ALTER COLUMN length/nullable and FK action changes).
+
+DESTRUCTIVE when dryRun=false: runs ALTER statements on the live database. Call with dryRun=true first, show the preview, and confirm before the real apply. Pass allowDrop/allowModify ONLY when the user explicitly asked for that destructive change; never retry with them automatically.
+
+USE WHEN:
+- 'codegen_dbschema_diff' reported drift and the user wants the database brought in sync ("sinkronkan database dengan schema", "tambahkan kolom yang kurang ke database")
+- Evolving an existing populated database without recreating tables (data preserved)
+- A preview of the ALTER statements -> dryRun=true (safe path)
+
+DO NOT USE FOR:
+- Detecting drift only -> 'codegen_dbschema_diff' (read-only)
+- Initial setup of an empty database -> 'codegen_dbschema_migrate'
+- Type, PK, default value, or CHECK changes, and the soft-delete consistency CHECK retrofit -> not supported (always skipped); suggest a manual SQL migration
+- Validating SDF files -> 'codegen_dbschema_validate'
 
 RECOMMENDED WORKFLOW:
 1. Run 'codegen_dbschema_diff' first to see the drift.
@@ -51,20 +64,6 @@ EXIT CODE SEMANTICS (important):
 - Exit 0 = success: every applicable drift was applied (or previewed in dry-run, or there was no drift). The output may still contain warnings for operations the platform defers (see below) — relay those.
 - Exit 1 = some drift was SKIPPED because it requires allowDrop or allowModify. This is a NORMAL, meaningful result — NOT a failure. In a real apply the additive statements WERE applied; only the skipped items remain. NEVER retry automatically with allowDrop/allowModify: those options drop or mutate data and need explicit user confirmation first.
 - Exit 2 = system error (invalid config, SDF load failure, connection failure, or apply failure). ROLLBACK means the database is unchanged; PARTIAL means some statements were applied and the database needs manual inspection.
-
-USE WHEN:
-- 'codegen_dbschema_diff' reported drift and the user wants to bring the database in sync incrementally
-- The user asks "apply the drift", "sinkronkan database dengan schema", "tambahkan kolom yang kurang ke database", "apply perubahan schema tanpa drop"
-- Evolving an existing populated database without recreating tables (data preserved)
-- The user wants a preview of the ALTER statements first — pass dryRun=true (safe path)
-
-DO NOT USE FOR:
-- Detecting drift without changing anything -> use 'codegen_dbschema_diff' (read-only)
-- Full CREATE/DROP deployment of a schema or initial setup of an empty database -> use 'codegen_dbschema_migrate'
-- Retrofitting the soft-delete consistency CHECK -> not supported here (detection-only); goes through 'codegen_dbschema_migrate' with drop (destructive) or manual SQL
-- Type changes, PK changes, default value changes, CHECK constraint changes -> not supported by the platform yet (always skipped); suggest a manual SQL migration
-- Validating SDF file correctness -> use 'codegen_dbschema_validate'
-- Reverse-engineering SDF files from the database -> use 'codegen_dbschema_introspect'
 
 This tool runs: npx restforge schema apply --schema-path=<path> --config=<config> [--table=<name>] [--dry-run] [--allow-drop] [--allow-modify] in the given cwd. The output is a structured human-readable report (DDL preview or per-statement progress, Warnings, Summary) — there is no JSON mode.
 
@@ -83,13 +82,8 @@ Preconditions:
 - The config file (default 'db-connection.env') must exist and contain valid database credentials.
 - SDF files must exist at the given path. The --schema-path flag is required by the CLI.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "apply the missing columns", "preview the ALTER statements").
-- Exit 1 is NOT an error. Present it as: "these changes were applied/previewed, these were skipped because they would drop or modify existing data". Then ask the user whether they want the destructive part — do not decide for them.
-- This tool MUTATES the live database when dryRun=false. Prefer dryRun=true on the first call and confirm with the user before the real apply.
-- Speak in plain language. Summarise the applied/skipped items; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Exit 1 is NOT an error. Present it as: "these changes were applied/previewed, these were skipped because they would drop or modify existing data". Then ask the user whether they want the destructive part — do not decide for them.`,
       inputSchema: {
         cwd: z
           .string()

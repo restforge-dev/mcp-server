@@ -30,12 +30,8 @@ DO NOT USE FOR:
 
 Behavior: read existing file, replace matching keys (preserving inline comments), append non-existing keys at the bottom, write back. Values may be string, number, or boolean (booleans serialize as 'true'/'false'). Values containing spaces, '=' or '#' are auto-quoted.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "set up the initial config", "fill in the credentials", "validate the connection").
-- Speak in plain language. Summarise the result by counting and naming the changed keys; do not paste the full diff block unless the user explicitly asks.
-- Do not echo sensitive values (license keys, passwords) into chat even when they appear masked in the response. Confirm presence and length only.
-- When a precondition is not met (e.g. config file is missing), frame it as a question or next-step suggestion rather than an error.`,
+NOTES:
+- Do not echo sensitive values (license keys, passwords) into chat even when they appear masked in the response. Confirm presence and length only.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z

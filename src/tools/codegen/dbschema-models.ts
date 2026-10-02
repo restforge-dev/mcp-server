@@ -32,13 +32,9 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The schema path must exist. If the CLI fails because the folder is missing, the failure response surfaces the underlying cause.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "list the schema models", "validate the schema", "generate the DDL").
-- Speak in plain language. Summarise the result (model count, schemas in use); do not paste the tabular output verbatim if many models are listed.
+NOTES:
 - Models listing skips cross-model validation. If FK references are broken, listing still works; that is by design — use the validate action for correctness check.
-- The user must specify --schema-path (e.g. './schema'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The user must specify --schema-path (e.g. './schema'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.`,
       inputSchema: {
         cwd: z
           .string()

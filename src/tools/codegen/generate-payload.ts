@@ -37,13 +37,7 @@ Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
 - The config file (default 'db-connection.env') must exist in the project and contain valid
   database credentials. This tool does not pre-check that — if the CLI fails, the failure response
-  will surface the underlying cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "install the package", "fill in the credentials", "generate the payload").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+  will surface the underlying cause.`,
       inputSchema: {
         cwd: z
           .string()

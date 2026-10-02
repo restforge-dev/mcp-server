@@ -9,56 +9,37 @@ export function registerCodegenSyncPayload(server: McpServer): void {
     'codegen_sync_payload',
     {
       title: 'Sync Payload',
-      description: `Apply schema drift to existing payload spec files in a project, archiving the previous version of each updated file, by running restforge payload --sync.
+      description: `Apply schema drift to existing RDF payload files, archiving the previous version of each updated file, by running restforge payload sync. With expandFk=true it also adds JOIN columns from referenced tables to datatables.
 
 USE WHEN:
-- The user asks to apply schema drift changes to payload files, sync payload files with the database, or update payload JSON files to match the current schema
-- The user asks things like "sinkronisasi payload", "update payload sesuai database", "apply schema drift", "sync payload files", "terapkan perubahan schema", "samakan payload dengan database"
-- After 'codegen_diff_payload' reported column-level differences and the user has reviewed them, wanting to apply the changes
-- After ALTER TABLE in the database when the user wants to bring all payload files in line with the new schema
-- The user mentions creating an archive of the previous payload before regenerating endpoints
-- The user wants to surface columns from a JOINED/referenced table in datatables (e.g. show supplier_name / warehouse_name alongside the base table) — use the FK expansion mode (expandFk). This generates query/<table>-join.sql from the table's foreign keys and points datatablesQuery/viewQuery at it. Phrases like "tambahkan kolom dari tabel relasi", "tampilkan nama supplier di datatables", "expand foreign key", "kolom join di datatables".
-- Before applying changes, strongly consider calling 'codegen_diff_payload' first to confirm what will change in each file (read-before-write per §5.3 — sync overwrites the active payload file and produces an archive that the user may want to inspect later).
-
-FK EXPANSION (expandFk):
-- 'expandFk' is opt-in and REQUIRES 'table' (single-table target). Without 'expandFk' the sync behavior is unchanged (pure schema drift).
-- When set, the CLI builds a JOIN from the table's foreign keys, writes query/<table>-join.sql, and rewrites datatablesQuery/viewQuery to reference it — this is how join columns get into datatables (the generator does NOT produce them).
-- 'fkColumns' is optional: a comma-separated list of QUALIFIED 'table.column' entries (e.g. 'supplier.supplier_code,supplier.supplier_name'). When omitted, the display column per FK is auto-resolved (name/nama -> code/kode -> number/nomor/no/num -> title/judul/label -> first UNIQUE text column). The primary key is never used as a display column.
-- 'expandFkSkip' is optional: a comma-separated list of referenced tables ('ref_table', or 'local_fk_col:ref_table' for one of several FKs to the same table) to leave out of the JOIN while the other FKs are still expanded.
-- When a referenced table has no display column candidate, the CLI fails (this tool always runs non-interactively) with "No natural display column found for referenced table ..." and lists the available columns. Ask the user which column to show or whether to skip that relation, then retry with 'fkColumns' or 'expandFkSkip'. Do not pick a column on the user's behalf.
-- If the table has no foreign keys, the CLI reports it and makes no JOIN — relay that to the user.
+- The user asks to sync payload files with the database or apply schema drift ("sinkronisasi payload", "samakan payload dengan database", "terapkan perubahan schema")
+- After 'codegen_diff_payload' showed differences the user wants applied, or after a table was altered
+- The user wants columns from a referenced table in datatables ("tampilkan nama supplier di datatables", "kolom join di datatables", "expand foreign key") -> expandFk=true with table
+- Consider 'codegen_diff_payload' first so the user sees what will change; sync overwrites the active payload and archives the old one
 
 DO NOT USE FOR:
-- Just checking which payload files have drift (without modifying anything) -> use 'codegen_validate_payload'
-- Looking at the per-column differences without applying them -> use 'codegen_diff_payload'
-- Generating a payload from scratch for a table that has no payload yet -> use 'codegen_generate_payload'
-- Cleaning up or deleting old '.archive.NNN' files — this tool does not handle archive cleanup; the user must remove archive files manually if desired
+- Only checking which payloads drifted -> 'codegen_validate_payload'
+- Per-column differences without applying them -> 'codegen_diff_payload'
+- A table with no payload yet -> 'codegen_generate_payload'
+- Cleaning up archived files in '.restforge/archive/' (manual task; the 5 most recent runs are kept automatically)
+
+FK EXPANSION (expandFk):
+- Opt-in and REQUIRES 'table'. Without it, sync is pure schema drift.
+- The CLI builds a JOIN from the table's foreign keys, writes query/<table>-join.sql, and repoints datatablesQuery/viewQuery at it. The generator never produces join columns; this is the path.
+- 'fkColumns' (optional): QUALIFIED 'table.column' list (e.g. 'supplier.supplier_code,supplier.supplier_name'). Omitted: the display column per FK is auto-resolved (name/nama -> code/kode -> number/nomor/no/num -> title/judul/label -> first UNIQUE text column). The PK is never a display column.
+- 'expandFkSkip' (optional): referenced tables to leave out ('ref_table', or 'local_fk_col:ref_table' for one of several FKs to the same table).
+- When a referenced table has no display candidate, the CLI fails with "No natural display column found for referenced table ..." and lists the columns. Ask the user which column to show or whether to skip that relation, then retry with 'fkColumns' or 'expandFkSkip'. Do not pick a column for the user.
+- A table without foreign keys gets no JOIN; relay that.
 
 CHECK CONSTRAINTS (schemaPath):
-- The CLI reads the schema definition files (SDF, default folder 'schema') and derives CHECK constraints into fieldValidation (enum, min, max, notEqual) plus the checkConstraints registry. A payload whose columns already match the database is still updated when these derived values are missing, and is reported as "CHECK constraints derived from SDF".
-- Pass 'schemaPath' only when the SDF lives somewhere other than the 'schema' folder. When no SDF is found, this derivation is skipped and existing values are kept.
+- The CLI reads the SDF files (default folder 'schema') and derives CHECK constraints into fieldValidation (enum, min, max, notEqual) plus the checkConstraints registry. A payload already in sync with the database is still updated when these derived values are missing ("CHECK constraints derived from SDF").
+- Pass 'schemaPath' only when the SDF is not in 'schema'. Without an SDF this derivation is skipped and existing values are kept.
 
-This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--schema-path=<path>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd.
-The CLI reads existing payload JSON files from the project payload/ directory, connects to the database described
-in the config file, and rewrites each payload file whose schema has drifted. Before overwriting, the
-previous file content is renamed to '<filename>.archive.NNN' (NNN is a sequential number starting at 001).
-Files that are already in sync are not touched. The CLI prints a per-file status (typically [SKIP],
-[ARCHIVE], [SYNCED]) followed by a Summary section with totals.
-
-If the sync run fails partway through (e.g. database connection drops), the CLI restores the archived
-file back to its original name so the active payload is not left corrupted.
+This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--schema-path=<path>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd. Each drifted payload is first moved to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept); files in sync are not touched. The CLI prints per-file status ([SKIP], [ARCHIVE], [SYNCED]) and a Summary. If a run fails partway, the CLI restores the archived file so the active payload is not left corrupted.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist in the project and contain valid
-  database credentials. This tool does not pre-check that — if the CLI fails, the failure response
-  will surface the underlying cause.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user. Describe actions by what they do (e.g. "update the payload files", "see the column-level differences first", "regenerate the endpoint code from the updated payload").
-- Speak in plain language. Summarise the result; do not paste raw CLI output unless the user explicitly asks.
-- When a precondition is not met, frame it as a question or next-step suggestion rather than an error.`,
+- The config file (default 'db-connection.env') must exist with valid database credentials; a CLI failure surfaces the cause.`,
       inputSchema: {
         cwd: z
           .string()
@@ -250,7 +231,7 @@ ${result.stdout}
 For the assistant:
 - Read the Summary section in the CLI output above and tell the user how many payload files were SYNCED and how many were SKIPPED (already in sync). Do not paste the raw CLI output unless the user explicitly asks.
 - If FK expansion was on, tell the user that a JOIN query file (query/<table>-join.sql) was generated from the table's foreign keys and datatablesQuery/viewQuery now reference it, so columns from the referenced tables appear in datatables. If the CLI output reports the table has no foreign keys, relay that no JOIN was applied.
-- For each file that was updated, the previous version of the file was renamed to '<filename>.archive.NNN' (NNN is a sequential number, starting at 001) in the same payload directory. Mention this to the user in plain language so they know the old version is still on disk and available for manual rollback if needed. If the CLI output lists specific archive filenames, you may relay them to the user.
+- For each file that was updated, the previous version of the file was moved to '.restforge/archive/<run>/<original relative path>'. Mention this to the user in plain language so they know the old version is still on disk and available for manual rollback if needed. If the CLI output lists specific archive filenames, you may relay them to the user.
 - Important: warn the user that any module or endpoint that was previously generated from the older payload still reflects the old schema. To bring those endpoints in line with the new schema, the user needs to regenerate the endpoint code from the updated payload as a follow-up step. Describe this in plain language; do not name the internal tool.
 - If no files were synced (every file was SKIPPED because it was already in sync), confirm in plain language that the payload files already match the database and no changes were applied.
 - Keep the reply concise. Do not mention internal tool names.`,

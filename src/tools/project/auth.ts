@@ -44,13 +44,7 @@ Preconditions:
   the CLI error response surfaces the cause.
 - The database must be active and reachable with the credentials in the config file.
 
-Note: Google Sign-In, RBAC, and Designer frontend integration are out of scope for this command.
-
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
-- Summarise what was installed (SDF files generated, tables created, processors written).
-- When a precondition is not met, frame it as a question or next-step suggestion.`,
+Note: Google Sign-In, RBAC, and Designer frontend integration are out of scope for this command.`,
       inputSchema: {
         cwd: z
           .string()

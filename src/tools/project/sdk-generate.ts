@@ -13,6 +13,8 @@ export function registerProjectSdkGenerate(server: McpServer): void {
 generated REST API so a frontend can call client.<resource>.<verb>(payload) instead of
 hand-writing fetch/$.ajax boilerplate. Wraps npx restforge project sdk --generate.
 
+DESTRUCTIVE only with force=true: the SDK folder is rewritten in place with NO archive backup, so local edits there are lost. Without force an existing SDK stops the run and nothing is written. Present force as an explicit choice to the user before using it.
+
 USE WHEN:
 - The user wants a JavaScript/TypeScript client for an already generated backend project
 - The user asks things like "generate SDK", "buatkan SDK untuk project", "bikin client SDK",
@@ -67,14 +69,9 @@ Preconditions:
 - The project must already be generated (metadata/<project>.json must exist). This tool does
   NOT pre-check that; the CLI error surfaces the cause and lists the paths it looked in.
 
-PRESENTATION GUIDANCE:
-- Match the user's language. If the user writes in Indonesian, respond in Indonesian.
-- Never mention internal tool names in the reply to the user.
+NOTES:
 - Summarise the output folder, the base URL, whether auth was included, and the resources
-  covered, then state the build/deploy steps the user has to run themselves.
-- If the CLI reports that an SDK already exists, present force as an explicit choice and
-  mention that existing files in that folder are overwritten without a backup.
-- When a precondition is not met, frame it as a question or next-step suggestion.`,
+  covered, then state the build/deploy steps the user has to run themselves.`,
       inputSchema: {
         cwd: z
           .string()
