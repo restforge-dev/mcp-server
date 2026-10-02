@@ -32,7 +32,7 @@ Hard rules:
 2. Run setup_validate_config once per session before the first tool that takes 'config'. File-only work (catalogs, writing SDF, file-only validate, DDL preview) does not need it.
 3. A tool whose description says DESTRUCTIVE needs the user's confirmation first; use dryRun when offered.
 4. Never start, stop, or restart the server or a Kafka consumer from a shell: write a launcher with runtime_generate_launcher or runtime_generate_consumer_launcher and let the user run it.
-5. Do not hand-edit generated output; change the definition file and regenerate.
+5. Backend output (src/modules, src/models) is overwritten on regenerate: change the definition file instead. Frontend app files may be edited; designer_generate merges the edits.
 6. When the user's request already covers the next step of a flow, continue without asking.
 7. Reply in the user's language, describe actions without tool names, summarise instead of pasting raw output, and never repeat secrets (license key, passwords).
 `.trim();

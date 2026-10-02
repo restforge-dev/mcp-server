@@ -24,6 +24,7 @@ DO NOT USE FOR:
 
 This tool wraps the RESTForge Designer CLI command: npx restforge-designer preview --payload=<payload> [--plugins-dir=<pluginsDir>], run in the given cwd.
 The CLI reads the UDF payload JSON, resolves the target plugin (auto-detected or from --plugins-dir), and prints the list of files it would generate. It does not modify any file and does not require a license.
+The list is the generator output only. Preview does not read the output folder, so it cannot tell which files a re-generate will merge, keep, or skip (e.g. index.html without the landing marker); 'designer_generate' reports that per file.
 
 Cross-reference (grounding & on-ramp):
 - To ground the UDF shape before previewing or editing it (valid field types, required appConfig fields, enums, limits), use 'designer_get_udf_catalog' — the authoritative source of UDF structure.

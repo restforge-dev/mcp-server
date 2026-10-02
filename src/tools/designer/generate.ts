@@ -8,7 +8,9 @@ export function registerDesignerGenerate(server: McpServer): void {
     'designer_generate',
     {
       title: 'Generate Designer Frontend',
-      description: `Generate frontend code from a UI Definition File (UDF) payload, by running npx restforge-designer generate. This WRITES the generated frontend files to disk.
+      description: `Generate frontend code from a UI Definition File (UDF) payload, by running npx restforge-designer generate. On an existing app it merges the new output into the files on disk and keeps user customizations.
+
+DESTRUCTIVE only with overwrite=true: every file is recreated from scratch and customizations in all files are discarded (the old files are archived). Confirm with the user before using it; a normal re-generate never needs it.
 
 USE WHEN:
 - The user asks to generate / build the frontend application from a UDF payload

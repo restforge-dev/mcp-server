@@ -11,6 +11,8 @@ export function registerCodegenMigratePayload(server: McpServer): void {
       title: 'Migrate Payload (RDF backend -> UDF frontend)',
       description: `Convert an existing backend payload file (RDF) into a frontend payload (UDF) for RESTForge Designer, by wrapping restforge payload migrate. The output is always a SPLIT multi-file set written into an output directory (app-config.json, one file per page under pages/, and an aggregator <appCode>.json), not a single UDF file. The migrator also auto-discovers JOINed tables, so one JOINed RDF can produce several pages at once.
 
+DESTRUCTIVE only with overwrite=true: existing pages are recreated from the RDF and their customizations are discarded (the old files are archived). Confirm with the user before using it; re-running without overwrite merges pages.
+
 USE WHEN:
 - The user wants to CREATE or start a frontend UDF and a backend RDF payload exists — this is the default on-ramp, before any hand-authoring
 - The user wants to build a frontend UDF from an existing backend payload, e.g. "buat UDF dari payload backend", "konversi RDF ke UDF", "migrate payload ke frontend", "bikin payload designer dari backend existing"
