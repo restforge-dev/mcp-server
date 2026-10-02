@@ -25,6 +25,9 @@ DO NOT USE FOR:
 - Removing/uninstalling embedded auth -> use 'designer_auth_remove'
 - Backend auth installation -> use 'project_auth'
 - Generating or re-generating frontend pages -> use 'designer_generate'
+- An auth-service app ('vanilla-js-auth' with the auth block from payload migrate): the plugin
+  already sends the token, so the auth-service flow ends at 'designer_generate' (after
+  'designer_rbac_create') without this tool
 
 CHOOSING BETWEEN 'designer_auth_create' AND THIS TOOL:
 - 'designer_auth_create' (--create) installs the standalone embedded overlay: it renders

@@ -19,6 +19,8 @@ DO NOT USE FOR:
 - The auth-service backend -> 'auth_service_init'
 - Generating the other application pages -> 'designer_generate'
 
+After this tool, run 'designer_generate'. The auth-service flow does not use 'designer_auth_attach'.
+
 With overwrite=true existing RBAC pages are overwritten; the CLI first archives the previous files.`,
       inputSchema: {
         cwd: z
