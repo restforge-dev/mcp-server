@@ -34,6 +34,7 @@ const DESTRUCTIVE_TOOLS = new Set([
   'codegen_create_dashboard',
   'designer_generate',
   'codegen_migrate_payload',
+  'auth_service_bootstrap',
 ]);
 
 type Collected = { name: string; description: string };

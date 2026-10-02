@@ -10,6 +10,7 @@ import { registerDesignerGetUdfCatalog } from './get-udf-catalog.js';
 import { registerDesignerAuthCreate } from './auth-create.js';
 import { registerDesignerAuthAttach } from './auth-attach.js';
 import { registerDesignerAuthRemove } from './auth-remove.js';
+import { registerDesignerRbacCreate } from './rbac-create.js';
 
 export function registerDesignerTools(server: McpServer): void {
   registerDesignerValidatePayload(server);
@@ -23,4 +24,5 @@ export function registerDesignerTools(server: McpServer): void {
   registerDesignerAuthCreate(server);
   registerDesignerAuthAttach(server);
   registerDesignerAuthRemove(server);
+  registerDesignerRbacCreate(server);
 }

@@ -10,6 +10,7 @@ import { registerDataTools } from './tools/data/index.js';
 import { registerKeyTools } from './tools/key/index.js';
 import { registerProjectTools } from './tools/project/index.js';
 import { registerLicenseTools } from './tools/license/index.js';
+import { registerAuthServiceTools } from './tools/auth-service/index.js';
 
 const SERVER_NAME = 'restforge-mcp';
 
@@ -25,7 +26,7 @@ const { version: SERVER_VERSION } = require('../package.json') as { version: str
 export const SERVER_INSTRUCTIONS = `
 RESTForge MCP server. Backend tools (setup_*, codegen_*, runtime_*, data_*, key_*, project_*, license_info) wrap the 'restforge' CLI; designer_* tools wrap 'npx restforge-designer' (frontend). Both ship in @restforgejs/platform, installed locally in the project folder (create one with 'npx create-restforge-app <name>').
 
-Load the 'restforge' skill before the first RESTForge tool call. It holds the intent router, the canonical order, and the layer rules: SDF = schema/<table>.js (database), RDF = payload/<name>.json (backend API), UDF = frontend/payload/ (made by codegen_migrate_payload). Without the skill, ground syntax with the codegen_get_*_catalog and designer_get_udf_catalog tools or the handbook at https://github.com/restforge/handbook; never borrow syntax from other frameworks.
+Load the 'restforge' skill before the first RESTForge tool call. It holds the intent router, the canonical order, and the layer rules: SDF = schema/<table>.js (database), RDF = payload/<name>.json (backend API), UDF = frontend/payload/ (made by codegen_migrate_payload). Without the skill, ground syntax with the codegen_get_*_catalog and designer_get_udf_catalog tools or the handbook at https://github.com/restforge/handbook; never borrow syntax from other frameworks. RBAC (roles, permissions): auth-service flow in skill.
 
 Hard rules:
 1. New table without stated fields: ask for the fields and types first (the user may hand the design over), then write schema/<table>.js with the file tools. codegen_dbschema_init is only for an explicit draft/skeleton request.
@@ -50,6 +51,7 @@ export function registerAllTools(server: McpServer): void {
   registerKeyTools(server);
   registerProjectTools(server);
   registerLicenseTools(server);
+  registerAuthServiceTools(server);
 }
 
 export async function startServer(): Promise<void> {
