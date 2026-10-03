@@ -19,7 +19,7 @@ DO NOT USE FOR:
 - Scaffolding files and env -> 'auth_service_init'
 - Registering an application or its permissions -> 'auth_service_link' / 'auth_service_provision'
 
-The super admin password and secrets are shown once in the CLI output. Tell the user to store them; never repeat them outside that first output.`,
+The super admin password and secrets are shown in the CLI output and saved as plain text to data-storage/credential/auth-service-superadmin.txt. Tell the user to store them in a secure place and delete that file; never repeat them outside that first output.`,
       inputSchema: {
         cwd: z.string().min(1).describe(CWD_DESCRIPTION),
         config: z.string().optional().describe('auth-service env file. Default: auth.env'),

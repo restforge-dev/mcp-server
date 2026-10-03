@@ -17,7 +17,7 @@ DO NOT USE FOR:
 - Generating the manifest -> 'auth_service_manifest'
 - Creating the auth tables -> 'auth_service_bootstrap'
 
-Run with dryRun=true first and show the plan to the user, then run again without dryRun after the user agrees. The owner password and secrets are shown once in the CLI output; tell the user to store them and never repeat them outside that first output.`,
+Run with dryRun=true first and show the plan to the user, then run again without dryRun after the user agrees. A generated owner password is shown in the CLI output and saved as plain text to data-storage/credential/<app-code>-owner.txt; tell the user to store it in a secure place and delete that file, and never repeat it outside that first output.`,
       inputSchema: {
         cwd: z.string().min(1).describe(CWD_DESCRIPTION),
         manifest: z.string().min(1).describe('Permission manifest file. REQUIRED.'),
@@ -36,7 +36,7 @@ Run with dryRun=true first and show the plan to the user, then run again without
         ownerPassword: z
           .string()
           .optional()
-          .describe('Owner password. When omitted a random password is generated and shown once'),
+          .describe('Owner password. When omitted a random password is generated, shown, and saved to data-storage/credential/<app-code>-owner.txt'),
         dryRun: z
           .boolean()
           .optional()
