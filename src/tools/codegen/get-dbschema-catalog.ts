@@ -13,7 +13,7 @@ export function registerCodegenGetDbschemaCatalog(server: McpServer): void {
 
 USE WHEN:
 - Before writing or editing schema/<table>.js, once its fields are settled with the user (or the design was handed over): request only the sections the file needs (e.g. section=fieldTypes, shorthandSyntax, auditColumns, relationTypes), once per session
-- The user asks about SDF syntax: \`defineModel\`, shorthand like \`string:36 pk\` or \`decimal:15,2 default:0\`, field types, \`fk:\`/\`unique\`/\`checks\`, relations, \`onDelete\`/\`onUpdate\` ("bagaimana sintaks defineModel", "field type apa saja")
+- The user asks about SDF syntax: \`defineModel\`, shorthand like \`string:36 pk\` or \`decimal:15,2 default:0\`, field types, relations, \`unique\`/\`checks\`, \`onDelete\`/\`onUpdate\`, the legacy \`fk:\` token ("bagaimana sintaks defineModel", "field type apa saja")
 - The user asks about audit columns (created_at, created_by, updated_at, updated_by) or soft-delete in the schema layer (section=softDelete)
 - The user asks which dialects are supported
 
@@ -22,6 +22,8 @@ DO NOT USE FOR:
 - Listing models, generating DDL, migrating, or introspecting -> 'codegen_dbschema_models' / 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_introspect'
 - RDF payload rules -> 'codegen_get_field_validation_catalog' / 'codegen_get_query_declarative_catalog'; dashboard spec -> 'codegen_get_dashboard_catalog'
 - Live database tables -> 'codegen_list_tables' / 'codegen_describe_table'
+
+PK/FK CONVENTION: UUID primary keys and the foreign keys that reference them are string:36 (the uuid type only appears in SDF introspected from native UUID columns). Foreign keys are declared in relations as belongsTo entries (localKey, references, onDelete); never write the inline fk: shorthand, which the parser still accepts only for existing schema files.
 
 SOFT-DELETE SECTION: documents the three contract columns (is_deleted/deleted_at/deleted_by, biconditional with softDelete.enabled), the reusable unique-column rules (string/text + single-column UNIQUE + physical length >= base length + 38), the UNIQUE eligibility gate (composite and non-string UNIQUEs rejected), the emitted DDL (CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes), and dialect support (Phase 1: PostgreSQL only).
 

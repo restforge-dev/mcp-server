@@ -24,18 +24,18 @@ const require = createRequire(import.meta.url);
 const { version: SERVER_VERSION } = require('../package.json') as { version: string };
 
 export const SERVER_INSTRUCTIONS = `
-RESTForge MCP server. Backend tools (setup_*, codegen_*, runtime_*, data_*, key_*, project_*, license_info) wrap the 'restforge' CLI; designer_* tools wrap 'npx restforge-designer' (frontend). Both ship in @restforgejs/platform, installed locally in the project folder (create one with 'npx create-restforge-app <name>').
+RESTForge MCP server. Backend tools (setup_*, codegen_*, runtime_*, data_*, key_*, project_*, license_info) wrap the 'restforge' CLI; designer_* tools wrap 'npx restforge-designer' (frontend). Both ship in @restforgejs/platform, installed locally in the project folder (new one: 'npx create-restforge-app <name>').
 
 Load the 'restforge' skill before the first RESTForge tool call. It holds the intent router, the canonical order, and the layer rules: SDF = schema/<table>.js (database), RDF = payload/<name>.json (backend API), UDF = frontend/payload/ (made by codegen_migrate_payload). Without the skill, ground syntax with the codegen_get_*_catalog and designer_get_udf_catalog tools or the handbook at https://github.com/restforge/handbook; never borrow syntax from other frameworks. RBAC (roles, permissions): auth-service flow in skill.
 
 Hard rules:
-1. New table without stated fields: ask for the fields and types first (the user may hand the design over), then write schema/<table>.js with the file tools. codegen_dbschema_init is only for an explicit draft/skeleton request.
-2. Run setup_validate_config once per session before the first tool that takes 'config'. File-only work (catalogs, writing SDF, file-only validate, DDL preview) does not need it.
-3. A tool whose description says DESTRUCTIVE needs the user's confirmation first; use dryRun when offered.
-4. Never start, stop, or restart the server or a Kafka consumer from a shell: write a launcher with runtime_generate_launcher or runtime_generate_consumer_launcher and let the user run it.
-5. Backend output (src/modules, src/models) is overwritten on regenerate: change the definition file instead. Frontend app files may be edited; designer_generate merges the edits.
-6. When the user's request already covers the next step of a flow, continue without asking.
-7. Reply in the user's language, describe actions without tool names, summarise instead of pasting raw output, and never repeat secrets (license key, passwords).
+1. New table without stated fields: ask for the fields and types first (the user may hand the design over), then write schema/<table>.js with the file tools. codegen_dbschema_init is only for an explicit draft/skeleton request. UUID PK/FK: string:36, not uuid; FKs in relations (belongsTo), not inline fk:.
+2. Run setup_validate_config once per session before the first tool that takes 'config'. File-only work (catalogs, SDF writing, file validate, DDL preview) skips it.
+3. A tool marked DESTRUCTIVE needs user confirmation first; use dryRun when offered.
+4. Never start, stop, or restart a server or Kafka consumer from a shell: write a launcher (runtime_generate_launcher, runtime_generate_consumer_launcher) for the user to run.
+5. Backend output (src/modules, src/models) is overwritten on regenerate: change the definition file instead. Frontend app edits are kept: designer_generate merges them.
+6. If the request already covers the next step of a flow, continue without asking.
+7. Reply in the user's language, describe actions without tool names, summarise instead of pasting raw output, never repeat secrets (license key, passwords).
 `.trim();
 
 // Registers every tool family on the given server. Exported so the guidance guard
