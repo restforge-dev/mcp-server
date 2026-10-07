@@ -17,6 +17,8 @@ DO NOT USE FOR:
 - Generating the manifest -> 'auth_service_manifest'
 - Creating the auth tables -> 'auth_service_bootstrap'
 
+Public self-registration (register.html) is closed by default. Only allowSelfRegister=true opens it, and running provision without it closes it again, so pass it on every run that should keep registration open. Register needs SMTP configured in auth.env.
+
 Run with dryRun=true first and show the plan to the user, then run again without dryRun after the user agrees. ownerEmail is required: ask the user for it instead of inventing one. After a new owner is created, the CLI emails the owner a sign-in notification without the password; if SMTP in auth.env is not configured it prints a warning and provisioning still completes. A generated owner password is shown in the CLI output and saved as plain text to data-storage/credential/<app-code>-owner.txt; tell the user to store it in a secure place and delete that file, and never repeat it outside that first output.`,
       inputSchema: {
         cwd: z.string().min(1).describe(CWD_DESCRIPTION),
@@ -41,6 +43,10 @@ Run with dryRun=true first and show the plan to the user, then run again without
           .boolean()
           .optional()
           .describe('Show the plan without writing to the database. Default: false'),
+        allowSelfRegister: z
+          .boolean()
+          .optional()
+          .describe('Open public self-registration for this application; each registrant becomes the owner of a new tenant. Without it registration is closed. Registration also needs SMTP configured in auth.env. Default: false'),
       },
       annotations: {
         title: 'Provision Permissions and Owner',
@@ -49,12 +55,13 @@ Run with dryRun=true first and show the plan to the user, then run again without
         destructiveHint: false,
       },
     },
-    async ({ cwd, manifest, authConfig, ownerUsername, ownerEmail, ownerPassword, dryRun }) => {
+    async ({ cwd, manifest, authConfig, ownerUsername, ownerEmail, ownerPassword, dryRun, allowSelfRegister }) => {
       const args = [`--manifest=${manifest}`];
       if (authConfig) args.push(`--auth-config=${authConfig}`);
       if (ownerUsername) args.push(`--owner-username=${ownerUsername}`);
       args.push(`--owner-email=${ownerEmail}`);
       if (ownerPassword) args.push(`--owner-password=${ownerPassword}`);
+      if (allowSelfRegister === true) args.push('--allow-self-register');
       if (dryRun === true) args.push('--dry-run');
       return runAuthService({
         cwd,
