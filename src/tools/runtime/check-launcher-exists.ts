@@ -2,24 +2,13 @@ import { z } from 'zod';
 import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { getLauncherFileNames, launcherNameSchema } from './launcher-files.js';
 
-const LAUNCHER_FILES = {
-  windows: {
-    start: 'server-start.bat',
-    stop: 'server-stop.bat',
-  },
-  linux: {
-    start: 'server-start.sh',
-    stop: 'server-stop.sh',
-  },
-} as const;
-
-const ECOSYSTEM_FILE = 'ecosystem.config.js';
-
-function getLauncherFiles(os: 'windows' | 'linux', mode: 'host' | 'pm2'): string[] {
-  const files: string[] = [LAUNCHER_FILES[os].start, LAUNCHER_FILES[os].stop];
+function getLauncherFiles(os: 'windows' | 'linux', mode: 'host' | 'pm2', name: string): string[] {
+  const names = getLauncherFileNames(os, name);
+  const files: string[] = [names.start, names.stop];
   if (mode === 'pm2') {
-    files.push(ECOSYSTEM_FILE);
+    files.push(names.ecosystem);
   }
   return files;
 }
@@ -41,11 +30,12 @@ DO NOT USE FOR:
 - Reading the content of an existing launcher -> use generic Read tools
 - Checking if the server is currently running -> use 'runtime_check_status'
 
-The list of files depends on os + mode (file names are FIXED, not user-customisable):
-- windows + host: server-start.bat, server-stop.bat
-- windows + pm2:  server-start.bat, server-stop.bat, ecosystem.config.js
-- linux + host:   server-start.sh, server-stop.sh
-- linux + pm2:    server-start.sh, server-stop.sh, ecosystem.config.js
+The list of files depends on os + mode + name (name defaults to "server"):
+- windows + host: <name>-start.bat, <name>-stop.bat
+- windows + pm2:  <name>-start.bat, <name>-stop.bat, ecosystem.config.js
+- linux + host:   <name>-start.sh, <name>-stop.sh
+- linux + pm2:    <name>-start.sh, <name>-stop.sh, ecosystem.config.js
+For a name other than "server", the PM2 file is <name>.ecosystem.config.js.
 
 NOTES:
 - When at least one file already exists, ask the user whether to overwrite (then call generate with overwrite=true).`,
@@ -53,6 +43,7 @@ NOTES:
         cwd: z.string().min(1).describe('Absolute path of the project folder root'),
         os: z.enum(['windows', 'linux']).describe('Target OS for the launcher'),
         mode: z.enum(['host', 'pm2']).describe('Runtime mode'),
+        name: launcherNameSchema,
       },
       annotations: {
         title: 'Check Launcher Files',
@@ -60,9 +51,9 @@ NOTES:
         idempotentHint: true,
       },
     },
-    async ({ cwd, os, mode }) => {
+    async ({ cwd, os, mode, name }) => {
       const projectCwd = resolve(cwd);
-      const files = getLauncherFiles(os, mode);
+      const files = getLauncherFiles(os, mode, name);
       const checked = await Promise.all(
         files.map(async (f) => {
           const path = join(projectCwd, f);
@@ -82,6 +73,7 @@ NOTES:
         cwd: projectCwd,
         os,
         mode,
+        name,
         files: checked,
         any_exists: anyExists,
       };
@@ -100,6 +92,7 @@ NOTES:
 Project path: ${projectCwd}
 OS: ${os}
 Mode: ${mode}
+Launcher name: ${name}
 
 --- Existence Check (JSON) ---
 ${prettyJson}
@@ -111,7 +104,7 @@ For the assistant:
                 ? 'Some files would be overwritten. Ask the user whether to overwrite (then call generate with overwrite: true).'
                 : 'No files would be overwritten. The user can proceed to generate.'
             }
-- File names are fixed: server-start.{bat|sh}, server-stop.{bat|sh}, plus ecosystem.config.js for PM2 mode.
+- File names follow the launcher name: <name>-start.{bat|sh}, <name>-stop.{bat|sh}, plus the PM2 ecosystem file for PM2 mode. Pass the same name to generate.
 - Match the user's language.`,
           },
         ],

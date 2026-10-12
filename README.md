@@ -61,7 +61,7 @@ The same entry can be written by hand when registration is managed manually. See
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | npx -y @restforgejs/mcp-server
 ```
 
-Output should list 75 tools across the ten domains described in [Available Tools](#available-tools).
+Output should list 76 tools across the ten domains described in [Available Tools](#available-tools).
 
 ### 2. Register with an MCP Client
 
@@ -141,7 +141,7 @@ The [Requirements](#requirements) above still apply when operating a RESTForge p
 
 ## Available Tools
 
-75 tools grouped into ten domains by name prefix. AI agents call these via the MCP protocol; end users do not invoke them directly.
+76 tools grouped into ten domains by name prefix. AI agents call these via the MCP protocol; end users do not invoke them directly.
 
 | Domain | Count | Coverage | Representative tools |
 |---|---|---|---|
@@ -149,14 +149,14 @@ The [Requirements](#requirements) above still apply when operating a RESTForge p
 | `codegen_*` | 27 | SDF (`schema`), RDF (`payload`), endpoint / processor / dashboard / kafka / test generators, grounding catalogs, SQL validation | `codegen_dbschema_migrate`, `codegen_generate_payload`, `codegen_create_endpoint`, `codegen_get_dbschema_catalog` |
 | `designer_*` | 12 | Frontend generator: project init, plugins, UDF catalog, validate / preview / generate, auth overlay, RBAC editor pages | `designer_init_project`, `designer_get_udf_catalog`, `designer_generate`, `designer_rbac_create` |
 | `runtime_*` | 7 | Project and config detection, preflight checks, server status, server and consumer launcher generation | `runtime_validate_preflight`, `runtime_generate_launcher`, `runtime_check_status` |
-| `project_*` | 4 | Project listing and deletion, backend auth extension, SDK client generation | `project_list`, `project_auth`, `project_sdk_generate` |
+| `project_*` | 5 | Project listing and deletion, backend auth extension, SDK client generation, multi-tenant mode | `project_list`, `project_auth`, `project_sdk_generate`, `project_tenant` |
 | `auth_service_*` | 5 | RBAC auth-service: init, database bootstrap, application link, permission manifest, provision | `auth_service_init`, `auth_service_bootstrap`, `auth_service_provision` |
 | `key_*` | 3 | Project API key management | `key_generate`, `key_list`, `key_revoke` |
 | `data_*` | 2 | Table row export and import across dialects | `data_pull`, `data_push` |
 | `license_*` | 1 | Machine license activation status | `license_info` |
 | `health_*` | 1 | MCP transport smoke test | `health_ping` |
 
-The full per-tool specification — every tool name, the CLI verb it wraps, its parameters, and where its behaviour differs from the CLI — lives in the `mcp/` section of the RESTForge Handbook. That section is the single reference for the surface; this table is a summary and deliberately does not restate all 75 rows. The live surface of any installed version is always discoverable through the MCP `tools/list` method.
+The full per-tool specification — every tool name, the CLI verb it wraps, its parameters, and where its behaviour differs from the CLI — lives in the `mcp/` section of the RESTForge Handbook. That section is the single reference for the surface; this table is a summary and deliberately does not restate all 76 rows. The live surface of any installed version is always discoverable through the MCP `tools/list` method.
 
 Tool names are a public contract. Adding or removing a tool without updating the corresponding handbook page counts as drift.
 

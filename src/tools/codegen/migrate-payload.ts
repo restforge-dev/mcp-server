@@ -26,6 +26,7 @@ DO NOT USE FOR:
 NOTES:
 - Without overwrite, existing pages, the aggregator, and app-config.json are merged: user edits are kept and RDF changes are applied, using snapshots in <output>/.meta/pages/ (commit them, never edit them). dateFormat and dateTimeFormat always follow the backend config.
 - The command stops before writing when app-config.json belongs to a different appCode.
+- authAppCode + authApiUrl write the auth block (auth-service flow, plugin vanilla-js-auth); give both or neither.
 - Next steps: validate the aggregator, preview, then generate. Point designer tools at <appCode>.json, not at page files.`,
       inputSchema: {
         cwd: z
@@ -76,6 +77,22 @@ NOTES:
           .boolean()
           .optional()
           .describe('Recreate existing page files under pages/ from scratch, discarding customization (and replace app-config.json when no aggregator exists yet). Not needed to add a new table or to bring RDF changes into an existing page, because existing pages are merged by default. The aggregator and app-config.json of an existing app are always merged, never replaced.'),
+        authAppCode: z
+          .string()
+          .min(1)
+          .optional()
+          .describe('Auth app code registered in the auth-service (auth_service_link), written to auth.appCode in the aggregator. Requires authApiUrl. Without both, no auth block is written.'),
+        authApiUrl: z
+          .string()
+          .min(1)
+          .optional()
+          .describe('Auth-service API endpoint written to auth.authApiUrl (e.g. http://localhost:3100/api/auth-service). Requires authAppCode.'),
+        idleTimeout: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe('Idle minutes before auto-logout, written to auth.idleTimeoutMinutes. Only with authAppCode and authApiUrl. When omitted, the CLI uses 30.'),
       },
       annotations: {
         title: 'Migrate Payload (RDF backend -> UDF frontend)',
@@ -84,8 +101,30 @@ NOTES:
         destructiveHint: false,
       },
     },
-    async ({ cwd, name, project, output, config, appName, appCode, plugin, port, overwrite }) => {
+    async ({ cwd, name, project, output, config, appName, appCode, plugin, port, overwrite, authAppCode, authApiUrl, idleTimeout }) => {
       const projectCwd = resolve(cwd);
+
+      // Same contract as the CLI (buildAuthBlock): the auth block needs both values,
+      // and idleTimeout is meaningless without them. Rejected before the CLI runs.
+      if (Boolean(authAppCode) !== Boolean(authApiUrl) || (idleTimeout !== undefined && !authAppCode)) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Invalid auth parameters: authAppCode and authApiUrl must be given together, and idleTimeout only together with both.
+
+authAppCode: ${authAppCode ?? '(not set)'}
+authApiUrl: ${authApiUrl ?? '(not set)'}
+idleTimeout: ${idleTimeout ?? '(not set)'}
+
+For the assistant:
+- Nothing was written. For an auth-service frontend, supply both the app code linked in the auth-service and its API URL (e.g. http://localhost:3100/api/auth-service), then retry. For a frontend without auth, omit all three.
+- Do not mention internal tool names.`,
+            },
+          ],
+          isError: false,
+        };
+      }
 
       // Precondition check: @restforgejs/platform must be present in node_modules.
       // Treated as a non-error precondition per the authoring guide §3.4.
@@ -124,6 +163,9 @@ For the assistant:
       if (plugin) args.push(`--plugin=${plugin}`);
       if (port !== undefined) args.push(`--port=${port}`);
       if (overwrite) args.push('--overwrite');
+      if (authAppCode) args.push(`--auth-app-code=${authAppCode}`);
+      if (authApiUrl) args.push(`--auth-api-url=${authApiUrl}`);
+      if (idleTimeout !== undefined) args.push(`--idle-timeout=${idleTimeout}`);
 
       const result = await execProcess('npx', args, { cwd: projectCwd, timeout: 60_000 });
 

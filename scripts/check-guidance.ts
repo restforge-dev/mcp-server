@@ -29,6 +29,7 @@ const DESTRUCTIVE_TOOLS = new Set([
   'codegen_dbschema_migrate',
   'codegen_dbschema_apply',
   'project_delete',
+  'project_tenant',
   'project_sdk_generate',
   'designer_auth_remove',
   'key_revoke',
