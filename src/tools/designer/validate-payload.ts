@@ -8,34 +8,22 @@ export function registerDesignerValidatePayload(server: McpServer): void {
     'designer_validate_payload',
     {
       title: 'Validate Designer Payload',
-      description: `Validate a frontend UI Definition File (UDF) payload against the schema of the RESTForge Designer plugin it targets, by running npx restforge-designer validate.
+      description: `Validate a frontend UDF against the schema of the RESTForge Designer plugin it targets, by running npx restforge-designer validate. Read-only, no license needed.
 
 USE WHEN:
-- The user asks to validate, check, or verify a frontend designer payload / UI definition (UDF) file
-- The user asks things like "validasi UDF", "cek payload frontend", "is this UI definition valid", "validate designer payload", "apakah payload UDF benar", "check the frontend payload against the plugin schema"
-- Before previewing or generating frontend code from a UDF, to confirm the payload is structurally valid against the plugin schema
-- The user mentions a designer/frontend payload JSON and wants to know whether it conforms to the plugin it targets
-- Routine pre-generation sanity check on a UDF file
+- The user asks to validate a UDF or designer payload ("validasi UDF", "cek payload frontend")
+- Before previewing or generating frontend code
+- After 'codegen_migrate_payload' or after editing a UDF
 
 DO NOT USE FOR:
-- Validating a backend RDF payload against the database schema -> use 'codegen_validate_payload'
-- Validating an SDF (database schema definition) -> use 'codegen_dbschema_validate'
-- Validating raw SQL -> use 'codegen_validate_sql'
-- Generating the frontend code itself (this only validates, it does not write files)
+- A backend RDF vs the database -> 'codegen_validate_payload'
+- An SDF file -> 'codegen_dbschema_validate'
+- Raw SQL -> 'codegen_validate_sql'
+- Writing the frontend -> 'designer_generate'
 
-This tool wraps the RESTForge Designer CLI command: npx restforge-designer validate --payload=<payload> [--plugins-dir=<pluginsDir>], run in the given cwd.
-The CLI reads the UDF payload JSON, resolves the target plugin (auto-detected or from --plugins-dir), and reports whether
-the payload is valid against that plugin's schema, listing structural errors when it is not. It does not modify any file and
-does not require a license.
-
-Cross-reference (grounding & on-ramp):
-- Before authoring or validating a UDF, ground its shape (valid field types, required appConfig fields, enums, limits) against the designer's own rules via 'designer_get_udf_catalog' — that catalog is the authoritative source of UDF structure.
-- If no UDF payload exists yet but the user has a backend RDF, the natural on-ramp is 'codegen_migrate_payload' (converts an RDF into a split UDF set); validate that output here.
-- Canonical UDF flow: codegen_migrate_payload -> designer_get_udf_catalog -> designer_validate_payload -> designer_preview_files -> designer_generate.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
+NOTES:
+- Point 'payload' at the aggregator <appCode>.json.
+- To fix errors, look up the allowed values with 'designer_get_udf_catalog'.`,
       inputSchema: {
         cwd: z
           .string()

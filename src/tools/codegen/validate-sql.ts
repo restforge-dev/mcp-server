@@ -13,37 +13,25 @@ export function registerCodegenValidateSql(server: McpServer): void {
     'codegen_validate_sql',
     {
       title: 'Validate SQL Query',
-      description: `Validate a SELECT (or WITH/CTE) SQL statement against the live database — checks syntax, column references, function existence, type compatibility, and JOIN resolution — by wrapping restforge query validate. Live introspection — the CLI runs EXPLAIN against the configured database without executing any rows.
+      description: `Validate a SELECT or WITH statement against the live database (syntax, columns, functions, types, JOINs), by running npx restforge query validate. The CLI runs EXPLAIN without executing rows.
 
 USE WHEN:
-- The user asks "is this SQL valid?", "check my SQL", "validate this query", "cek SQL ini bener atau salah"
-- Before invoking 'codegen_create_dashboard' with widget queries — to verify each widget SQL passes against the live database before committing the payload file
-- After authoring a complex SQL (multi-table JOIN, CTE, window function) — to catch column reference errors, ambiguous columns, dialect-specific function mismatches before runtime
-- The user reports a dashboard widget failed at runtime with a database error — to confirm whether the SQL is the cause and identify the specific error code/message
-- Iterating on SQL: validate, fix, re-validate (the tool is idempotent and read-only)
-- After 'codegen_describe_table' suggested column names but the user wants a final correctness check on a draft SQL
+- The user asks whether a SQL is valid ("cek SQL ini bener atau salah")
+- Before 'codegen_create_dashboard', to check each widget SQL
+- After writing a complex SQL (multi-table JOIN, CTE, window function), or while iterating on one
+- A dashboard widget failed at runtime with a database error
 
 DO NOT USE FOR:
-- Validating the JSON shape of a payload file -> use 'codegen_validate_payload' or 'codegen_validate_dashboard_payload'
-- Checking whether the SQL result shape matches a widget query key's expected shape (scalar/object/array) -> out of scope; that is checked by the dashboard payload validator separately
-- Running INSERT/UPDATE/DELETE/DROP/ALTER/CREATE/TRUNCATE — these statements are rejected before any database connection is opened (this tool is read-only)
-- Listing tables in the database -> use 'codegen_list_tables'
-- Describing a table's columns/PK/FK -> use 'codegen_describe_table'
-- Performance/query plan analysis -> out of scope; the tool only reports validation pass/fail, not the query plan
-
-Cross-reference: this tool complements 'codegen_list_tables' and 'codegen_describe_table'. Use list/describe to ground SQL on the live schema, then validate-sql to confirm the composed SQL is correct before commit.
-
-This tool runs: npx restforge query validate --config=<config> --sql=<sql> --pretty=false in the given cwd.
-The CLI runs EXPLAIN (PostgreSQL/MySQL) or EXPLAIN PLAN FOR (Oracle) against the configured database, without executing any rows.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules, in a version that provides the 'query validate' sub-command (confirmed present in 5.5.5; the exact minimum version is not established).
-- The config file (default 'db-connection.env') must exist in the project (or in cwd/config/) and contain valid database credentials. The CLI auto-fallbacks to the config/ subfolder if the file is not found at the top level.
+- Validating a payload JSON -> 'codegen_validate_payload' / 'codegen_validate_dashboard_payload'
+- Checking whether the result shape fits a widget query key -> the dashboard payload validator
+- INSERT/UPDATE/DELETE/DDL -> rejected before connecting; the tool is read-only
+- Listing tables or describing columns -> 'codegen_list_tables' / 'codegen_describe_table'
+- Query plan or performance analysis -> out of scope
 
 NOTES:
-- This is a live introspection: the tool actively runs EXPLAIN against the database. The result reflects the database state at query time. Zero rows are executed; the planner only parses and resolves references.
-- For SELECT-only rejection (when the SQL starts with INSERT/UPDATE/DELETE/etc), explain that the validator is read-only by design and ask the user to revise to a SELECT statement.
-- Error codes are dialect-specific: Postgres uses 5-char SQLSTATE (e.g. '42703'), MySQL uses ER_* names or numeric errno, Oracle uses 'ORA-XXXXX'. When relevant, mention the category in plain language (column not found, ambiguous reference, function mismatch, etc) instead of citing the raw code.`,
+- Ground identifiers with 'codegen_list_tables' and 'codegen_describe_table' first.
+- A non-SELECT statement is rejected by design; ask the user to revise it to a SELECT.
+- Error codes are dialect-specific (PostgreSQL SQLSTATE, MySQL ER_*, Oracle ORA-). Explain the category in plain language (column not found, ambiguous reference, function mismatch) instead of citing the raw code.`,
       inputSchema: {
         cwd: z
           .string()

@@ -44,36 +44,27 @@ export function registerCodegenCreateEndpoint(server: McpServer): void {
     'codegen_create_endpoint',
     {
       title: 'Create Endpoint Module',
-      description: `Generate the runnable endpoint module (submodule, model, metadata, demo files, optional audit migration) for a project from an existing RDF payload, by wrapping restforge create. URL pattern produced: /api/{project}/{endpoint}/{action}.
+      description: `Generate the runnable endpoint module (submodule, model, metadata, examples, optional audit migration) from an existing RDF payload, by running npx restforge create. URL pattern: /api/{project}/{endpoint}/{action}.
 
-DESTRUCTIVE: with the default force=true an existing module, model, or query folder is overwritten (the CLI first moves the previous files to '.restforge/archive/<run>/'). There is no preview. Confirm intent with the user in plain language BEFORE calling, e.g. "Saya akan generate endpoint <endpoint> di project <project>. Versi lama, bila ada, diarsipkan ke .restforge/archive. Lanjut?". Do not detect conflicts yourself.
+DESTRUCTIVE: with the default force=true an existing module, model, or query folder is overwritten; the CLI first moves the previous files to '.restforge/archive/<run>/' (5 most recent runs kept). There is no preview. Confirm with the user BEFORE calling (endpoint, project, old version archived).
 
 USE WHEN:
-- The user asks to generate, create, or scaffold an endpoint, resource, or module from a payload ("buatkan endpoint untuk product", "generate kode dari payload ini", "tambahkan endpoint X ke project Y")
-- A payload was just generated or validated and the user's request already covers making it runnable
-- The user wants to regenerate an endpoint after its payload changed, or bootstrap a new project with its first endpoint
+- The user asks to generate or scaffold an endpoint, resource, or module from a payload ("buatkan endpoint untuk product")
+- A payload was just generated or validated and the request already covers making it runnable
+- Regenerating an endpoint after its payload changed
 
 DO NOT USE FOR:
-- Producing the payload JSON from a table -> 'codegen_generate_payload'
-- Validating or diffing a payload -> 'codegen_validate_payload' / 'codegen_diff_payload'
-- Merging schema drift into payload files -> 'codegen_sync_payload'
-- A dashboard endpoint -> 'codegen_create_dashboard'; a processor -> 'codegen_create_processor'; a Kafka consumer -> 'codegen_create_kafka_consumer'
-- Listing or deleting projects -> 'project_list' / 'project_delete'
-- Database DDL changes -> the dbschema tools (the only DDL this tool emits is the audit table for the 'audit' fieldPolicy)
-
-FORCE=FALSE (conflict probe): when nothing conflicts the CLI generates normally. When the module already exists, the CLI prints a conflict summary and stops at its y/N prompt (end-of-input in this context): NOTHING is written and the run is reported as aborted. force=false also refuses to re-register a project under a different database type. Use it when the user wants to know whether a module exists before regenerating.
-
-DATABASE TYPE: resolved by the CLI. (1) 'database' when set always wins; (2) otherwise DB_TYPE from the active config ('config', else the recorded default); (3) otherwise 'postgres'. Do NOT set 'database' just to be explicit: a guessed value silently overrides the project's config. Mention a database type in the confirmation only when the user named one.
-
-SAFETY NET: before overwriting, the CLI moves the previous files to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept), so a run can be undone by copying that folder back. The CLI writes to 'src/modules/<project>/', 'src/models/<project>/', 'metadata/<project>/', 'examples/<project>/<endpoint>/', and updates '.restforge/projects.json'.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The payload file must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json). The 'payload' parameter takes the name with or without '.json'; the CLI resolves both to the same lowercase file.
-- The CLI rejects reserved project names (src, lib, node_modules, config, utils, models, controllers, middleware, routes) and reserved endpoint names (health, status, admin, api, auth, login, logout, register, index, main, app, config, test, docs, swagger, graphql, websocket, socket). When in doubt, ask the user for a different name first.
+- Producing the payload from a table -> 'codegen_generate_payload'
+- Validating, diffing, or syncing a payload -> 'codegen_validate_payload' / 'codegen_diff_payload' / 'codegen_sync_payload'
+- A dashboard -> 'codegen_create_dashboard'; a processor -> 'codegen_create_processor'; a Kafka consumer -> 'codegen_create_kafka_consumer'
+- Database DDL -> the dbschema tools (this tool only emits the audit table for fieldPolicy 'audit')
 
 NOTES:
-- After the run, read the CLI output for archive activity ('.restforge/archive/<run>/'); when archives were created, tell the user the previous versions are kept for rollback.`,
+- Leave 'database' unset unless the user named one: the CLI reads DB_TYPE from the config, and a guessed value overrides it.
+- force=false is a conflict probe: when the module exists, nothing is written and the run is reported as aborted.
+- 'payload' takes the file name with or without .json, resolved from <cwd>/payload/.
+- Reserved project names (src, lib, node_modules, config, utils, models, controllers, middleware, routes) and endpoint names (health, status, admin, api, auth, login, logout, register, index, main, app, config, test, docs, swagger, graphql, websocket, socket) are rejected.
+- When archives were created, tell the user the previous versions are kept for rollback.`,
       inputSchema: {
         cwd: z
           .string()

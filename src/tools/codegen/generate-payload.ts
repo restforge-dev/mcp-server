@@ -9,35 +9,26 @@ export function registerCodegenGeneratePayload(server: McpServer): void {
     'codegen_generate_payload',
     {
       title: 'Generate Payload',
-      description: `Generate a payload spec file (metadata, fields, action specs) from a database table by introspecting its schema via restforge.
+      description: `Generate an RDF payload file (fields, metadata, action specs) from a database table, by running npx restforge payload generate. Table 'guest_book' becomes payload/guest-book.json.
 
 USE WHEN:
-- The user asks to generate a payload, payload spec, or payload metadata file from a database table
-- The user asks things like "buatkan payload dari table X", "generate payload guest_book", "scan schema table to JSON", "create payload for endpoint generation"
-- The user wants to "introspect" or "scan" a database table into a JSON spec
-- Starting CLI codegen workflow after the project config has been validated
-- Re-generating payload after a schema change in the database
+- The user asks for a payload from a table ("buatkan payload dari table X", "generate payload guest_book")
+- A table was just created and the request covers building its API
+- Regenerating a payload after a schema change
+- A master-detail (header-detail) pair -> 'detail' with the detail table
 
 DO NOT USE FOR:
-- Filling in credentials in db-connection.env -> use 'setup_write_env'
-- Validating config before generating payload -> use 'setup_validate_config'
-- Creating the project / endpoint code from a payload -> that is the next CLI step (will be wrapped in a future tool, not yet available)
+- Credentials in the env file -> 'setup_write_env'
+- Validating the config -> 'setup_validate_config'
+- Making the payload runnable -> 'codegen_create_endpoint'
+- Applying schema drift to an existing payload -> 'codegen_sync_payload'
+- A frontend UDF -> 'codegen_migrate_payload'
 
-This tool runs: npx restforge payload generate --table=<table> --config=<config> [--output=<dir>] [--schema-path=<path>] [--detail=<table>] in the given cwd.
-The CLI connects to the database described in the config file, reads the table schema,
-and writes a payload JSON file (e.g. table 'guest_book' -> 'guest-book.json' with underscore
-mapped to hyphen). The payload file is the input for the next codegen step (project + endpoint creation).
-
-Optional flags and when they matter:
-- 'output': write the payload somewhere other than the default 'payload/' folder. Note that the endpoint generator reads from 'payload/', so a custom output folder means the file has to be moved back before generating code.
-- 'schemaPath': location of the schema definition files (SDF). REQUIRED when the table has soft-delete columns (is_deleted / deleted_at / deleted_by): the softDelete block of the payload is derived from the SDF, and the CLI fails with an explicit error when the table has those columns but no matching SDF declaration. The SDF is also used to derive CHECK constraints into fieldValidation (enum, min, max, notEqual) and the checkConstraints registry; when no SDF is found, that derivation is skipped.
-- 'detail': name of the detail table for a master-detail (header-detail) pair. The payload then also gets a fully populated 'masterDetail' block plus a generated detail query file, and the composite actions are enabled. The detail table must have a foreign key referencing the master table's primary key. An existing 'masterDetail' block in the target file is preserved, not overwritten.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist in the project and contain valid
-  database credentials. This tool does not pre-check that — if the CLI fails, the failure response
-  will surface the underlying cause.`,
+NOTES:
+- 'schemaPath' is required when the table has soft-delete columns (is_deleted, deleted_at, deleted_by): the softDelete block comes from the SDF, and the CLI fails without it. The SDF also supplies CHECK constraints for fieldValidation and checkConstraints; without an SDF that step is skipped.
+- 'detail' adds a masterDetail block, a detail query file, and composite actions. The detail table needs an FK to the master primary key. An existing masterDetail block is kept.
+- 'output' other than payload/ means the file must be moved back before 'codegen_create_endpoint'.
+- JOIN columns are never generated here; use 'codegen_sync_payload' with expandFk.`,
       inputSchema: {
         cwd: z
           .string()

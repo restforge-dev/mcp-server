@@ -9,40 +9,23 @@ export function registerSetupInstallPackage(server: McpServer): void {
     'setup_install_package',
     {
       title: 'Install @restforgejs/platform Package',
-      description: `Install the @restforgejs/platform package into the project's node_modules via npm.
+      description: `Install the @restforgejs/platform package locally into the project's node_modules, by running npm install @restforgejs/platform@<version>. Default version is 'beta' (public pre-release); 'latest' or an exact version also work.
 
 USE WHEN:
-- The user wants to install RESTForge (@restforgejs/platform) into a project
-- The project folder exists but does not yet have @restforgejs/platform in node_modules
-- Setting up a new project before the configuration stage
-- Updating @restforgejs/platform to a specific tag or version
-- The user says things like "install restforge", "tambahkan @restforgejs/platform",
-  "pasang package restforge", "set up the package", "siapkan project ini",
-  "upgrade @restforgejs/platform", "ganti versi restforge"
+- The project folder exists but @restforgejs/platform is not installed yet (granular setup: after 'setup_create_folder', before 'setup_init_config')
+- Updating @restforgejs/platform to a tag or version ("upgrade @restforgejs/platform", "ganti versi restforge")
+- The user asks to install RESTForge into a project ("install restforge", "pasang package restforge")
 
 DO NOT USE FOR:
-- Creating a new project folder -> use 'setup_create_folder'
-- Generating config skeleton -> use 'setup_init_config'
-- Filling in credentials -> use 'setup_write_env'
-- Validating the configuration -> use 'setup_validate_config'
+- Creating a project folder -> 'setup_create_folder'
+- Generating the config skeleton -> 'setup_init_config'
+- Filling in credentials -> 'setup_write_env'
+- Validating the configuration -> 'setup_validate_config'
+- Installing other project dependencies, e.g. after 'auth_service_init' -> run npm install in the project folder with the shell
 
-SCAFFOLDING NOTE:
-The dominant way to create a new RESTForge project is the one-shot scaffolder
-'npx create-restforge-app <name>', which makes the folder, runs
-'npm install @restforgejs/platform' (local), and bundles the designer binary in a
-single step. This 'setup_install_package' tool (and 'setup_create_folder' /
-'setup_init_config') are the GRANULAR, programmatic alternative — use them when the
-agent must build the project step by step rather than running the interactive
-scaffolder. 'npm install @restforgejs/platform' remains valid but is no longer the
-primary entry point.
-
-In the granular flow this tool sits in the middle of the new-project setup chain:
-typically run after 'setup_create_folder' creates the project folder, and before
-'setup_init_config' which generates the configuration skeleton. 'setup_init_config'
-will return a precondition message if this tool has not been run first. // per §5.2
-
-This tool runs: npm install @restforgejs/platform@<version> in the given cwd (local install, not global).
-Default version is "beta" because RESTForge is currently a public pre-release. Use "latest" once stable, or a specific version (e.g. "1.2.3").`,
+NOTES:
+- The usual way to start a new project is npx create-restforge-app <name>, which creates the folder, installs the package locally, and bundles the designer in one step. This tool is the step-by-step alternative.
+- Global installation is not supported.`,
       inputSchema: {
         cwd: z
           .string()

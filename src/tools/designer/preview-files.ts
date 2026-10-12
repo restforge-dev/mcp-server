@@ -8,32 +8,21 @@ export function registerDesignerPreviewFiles(server: McpServer): void {
     'designer_preview_files',
     {
       title: 'Preview Designer Files',
-      description: `Preview (dry-run) the frontend files that the RESTForge Designer would generate from a UI Definition File (UDF) payload, by running npx restforge-designer preview. This lists what would be produced WITHOUT writing anything to disk.
+      description: `List the frontend files RESTForge Designer would generate from a UDF, by running npx restforge-designer preview. Nothing is written.
 
 USE WHEN:
-- The user asks which files would be generated, or wants a dry-run before generating frontend code
-- The user asks things like "file apa yang akan di-generate", "preview output frontend designer", "dry-run generate", "what files will the designer produce", "tunjukkan hasil generate tanpa menulis file", "preview the designer output"
-- Before actually generating the frontend code, to inspect the planned output and confirm it looks right
-- The user mentions a designer/frontend UDF payload and wants to see the resulting file layout first
+- The user asks which files would be generated, or wants a dry run ("preview output frontend designer", "tunjukkan hasil generate tanpa menulis file")
+- Before 'designer_generate', to confirm the planned output
 
 DO NOT USE FOR:
-- Validating that a UDF payload is structurally correct against the plugin schema -> use 'designer_validate_payload'
-- Actually generating and writing the frontend files (preview is read-only; the real generation tool writes files)
-- Listing the available designer plugins -> use 'designer_list_plugins'
-- Inspecting one plugin's metadata -> use 'designer_inspect_plugin'
+- Checking the UDF structure -> 'designer_validate_payload'
+- Writing the files -> 'designer_generate'
+- Listing plugins or inspecting one -> 'designer_list_plugins' / 'designer_inspect_plugin'
 
-This tool wraps the RESTForge Designer CLI command: npx restforge-designer preview --payload=<payload> [--plugins-dir=<pluginsDir>], run in the given cwd.
-The CLI reads the UDF payload JSON, resolves the target plugin (auto-detected or from --plugins-dir), and prints the list of files it would generate. It does not modify any file and does not require a license.
-The list is the generator output only. Preview does not read the output folder, so it cannot tell which files a re-generate will merge, keep, or skip (e.g. index.html without the landing marker); 'designer_generate' reports that per file.
-
-Cross-reference (grounding & on-ramp):
-- To ground the UDF shape before previewing or editing it (valid field types, required appConfig fields, enums, limits), use 'designer_get_udf_catalog' — the authoritative source of UDF structure.
-- If the UDF does not exist yet but a backend RDF does, the on-ramp is 'codegen_migrate_payload' (RDF -> split UDF set), then validate and preview that output.
-- Canonical UDF flow: codegen_migrate_payload -> designer_get_udf_catalog -> designer_validate_payload -> designer_preview_files -> designer_generate.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
+NOTES:
+- Point 'payload' at the aggregator <appCode>.json.
+- The list is the generator output only. Preview does not read the output folder, so it cannot tell which files a re-generate will merge, keep, or skip; 'designer_generate' reports that per file.
+- Read-only and needs no license.`,
       inputSchema: {
         cwd: z
           .string()

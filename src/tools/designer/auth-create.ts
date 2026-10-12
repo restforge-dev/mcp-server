@@ -8,49 +8,24 @@ export function registerDesignerAuthCreate(server: McpServer): void {
     'designer_auth_create',
     {
       title: 'Install Embedded Frontend Auth',
-      description: `Install embedded auth (rfx_auth) into an existing RESTForge frontend project — writes
-login.html, signup.html, js/rfx_auth.js, injects an auth guard into existing app pages,
-and marks the project as having embedded auth in payload/app-config.json.
+      description: `Install embedded auth (rfx_auth) into an existing frontend project, by running npx restforge-designer auth --create. It writes login.html, signup.html, and js/rfx_auth.js, injects the guard script into existing pages, and writes the embeddedAuth marker to payload/app-config.json.
 
 USE WHEN:
-- The user wants to add a login/signup UI to an existing frontend project
-- The user asks things like "pasang auth frontend", "install auth di frontend", "tambah login
-  ke aplikasi", "add embedded auth", "install rfx_auth", "setup auth frontend"
-- The frontend project was generated WITHOUT the vanilla-js-auth plugin and the user now
-  wants to add auth capabilities
-- The user explicitly wants the embedded rfx_auth approach (not the vanilla-js-auth plugin)
+- The user wants a login/signup UI on an existing frontend ("pasang auth frontend", "tambah login ke aplikasi", "install rfx_auth")
+- The frontend was generated without an auth plugin and needs auth now
 
 DO NOT USE FOR:
-- Removing/uninstalling embedded auth -> use 'designer_auth_remove'
-- Backend auth installation -> use 'project_auth'
-- Retrofitting the auth scaffold onto a project whose pages are already generated, or a
-  project running the 'vanilla-js-auth'/'vanilla-js-custom' plugin -> use 'designer_auth_attach'
-- Generating or re-generating frontend pages -> use 'designer_generate'
-
-This tool wraps: npx restforge-designer auth --create --project=<project> [optional flags],
-run in the given cwd.
-
-What this command does (in order):
-1. Renders login.html, signup.html, js/rfx_auth.js from embedded templates (no Google Sign-In)
-2. Writes the 3 artifacts to <frontend-path>/<project>/
-3. Injects an auth guard <script src="js/rfx_auth.js"> into all existing *.html pages in the
-   target dir (except login.html and signup.html themselves)
-4. Writes the embeddedAuth marker to payload/app-config.json (non-destructive; other keys untouched)
-
-Idempotent: safe to re-run — files are skipped if they already exist, unless --overwrite is given.
-If no app pages exist yet, the guard injection is skipped with a warning; the guard is injected
-automatically when 'designer_generate' creates new pages later.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks
-  that by running 'npx restforge-designer --version'; if it cannot run, the response surfaces
-  a non-error precondition.
-
-Note: Google Sign-In, the vanilla-js-auth plugin, and @restforgejs/auth (auth+RBAC) are out of
-scope — this command only manages the rfx_auth embedded flow.
+- Removing embedded auth -> 'designer_auth_remove'
+- Backend auth -> 'project_auth'
+- Pages already generated with 'vanilla-js-auth' or 'vanilla-js-custom', or a missing-auth-artifacts warning -> 'designer_auth_attach'
+- RBAC (roles, permissions) -> auth-service with the 'vanilla-js-auth' plugin, not this tool
+- Generating pages -> 'designer_generate'
 
 NOTES:
-- Summarise what was installed: which files were written and which pages got the auth guard.`,
+- Idempotent: existing files are skipped unless overwrite is set.
+- With no pages yet, guard injection is skipped with a warning; 'designer_generate' injects it into pages created later.
+- No Google Sign-In.
+- Summarise the files written and the pages that got the guard.`,
       inputSchema: {
         cwd: z
           .string()

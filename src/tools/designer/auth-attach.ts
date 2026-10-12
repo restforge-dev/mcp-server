@@ -8,74 +8,26 @@ export function registerDesignerAuthAttach(server: McpServer): void {
     'designer_auth_attach',
     {
       title: 'Retrofit Frontend Auth Scaffold',
-      description: `Retrofit the full auth scaffold onto a frontend project whose pages are ALREADY generated,
-without touching the page files and without breaking customisations. This is the "turn auth on
-afterwards" path for a running application.
+      description: `Retrofit the full auth scaffold onto a frontend app whose pages are already generated, without touching page files, by running npx restforge-designer auth --attach. This is the path for switching auth on afterwards.
 
 USE WHEN:
-- The frontend project already has generated pages and auth has to be switched on afterwards
+- The pages already exist and auth must be switched on afterwards ("pasang auth di app yang sudah jadi", "retrofit auth")
 - 'designer_generate' warned that the auth artifacts are missing
-- The project payload enables the auth block on an auth-capable plugin ('vanilla-js-auth' or
-  'vanilla-js-custom') but the auth files were never rendered
-- The user asks things like "pasang auth di app yang sudah jadi", "retrofit auth", "attach auth",
-  "aktifkan auth belakangan", "lengkapi kerangka auth"
+- The UDF enables the auth block on 'vanilla-js-auth' or 'vanilla-js-custom' but the auth files were never rendered
 
 DO NOT USE FOR:
-- Adding a standalone rfx_auth login/signup overlay to any app -> use 'designer_auth_create'
-- Removing/uninstalling embedded auth -> use 'designer_auth_remove'
-- Backend auth installation -> use 'project_auth'
-- Generating or re-generating frontend pages -> use 'designer_generate'
-- An auth-service app ('vanilla-js-auth' with the auth block from payload migrate): the plugin
-  already sends the token, so the auth-service flow ends at 'designer_generate' (after
-  'designer_rbac_create') without this tool
-
-CHOOSING BETWEEN 'designer_auth_create' AND THIS TOOL:
-- 'designer_auth_create' (--create) installs the standalone embedded overlay: it renders
-  login.html, signup.html and js/rfx_auth.js and injects the guard. Reach for it when the app
-  simply needs a login/signup UI and there is no auth-capable plugin in play.
-- 'designer_auth_attach' (--attach) completes the auth scaffold of an already generated project.
-  Reach for it when the pages already exist, when the plugin is 'vanilla-js-auth' or
-  'vanilla-js-custom', or when the generator reported missing auth artifacts.
-- The two modes are mutually exclusive per invocation; the CLI accepts exactly one of
-  --create / --attach / --remove.
-
-This tool wraps: npx restforge-designer auth --attach --project=<project> [optional flags],
-run in the given cwd.
-
-What this command does — two layers, depending on the project state:
-1. window.Auth scaffold (always): installs js/rfx_auth.js, injects
-   <script src="js/rfx_auth.js"> into the existing pages (except the login page), and writes the
-   embeddedAuth marker to payload/app-config.json. Generated pages call this contract to add the
-   Authorization header to every API request.
-2. Plugin login artifacts (only when applicable): when the project UDF payload contains an auth
-   block and its plugin is 'vanilla-js-auth' or 'vanilla-js-custom', it also renders js/auth.js,
-   login.html and js/login.js in the plugin flavour, and injects the appCode/authBaseUrl block
-   into js/config.js idempotently (an existing config file is not overwritten, only extended
-   with a marked block). In this mode the rfx_auth login.html/signup.html are NOT written — the
-   plugin login is used instead, and the rfx_auth storage key is aligned with the plugin login so
-   both sides read the same session.
-
-Page files are never touched: the application pages and their customisations stay intact.
-
-Idempotent: safe to re-run. Existing files are skipped unless overwrite is set (an archive backup
-is created first); script-tag injection and the config block are never duplicated.
-
-Defaults:
-- frontendPath: ./frontend/apps (target app dir = <frontendPath>/<project>)
-- apiBaseUrl: resolved from payload/app-config.json; fallback http://127.0.0.1:3000/api/<project>
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the
-  @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response surfaces a non-error
-  precondition.
-
-Note: Google Sign-In and @restforgejs/auth (auth+RBAC backend) are out of scope for this command.
-Server-side protection is configured separately through the backend payload authGuard block.
+- A standalone rfx_auth login/signup overlay -> 'designer_auth_create'
+- Removing embedded auth -> 'designer_auth_remove'
+- Backend auth -> 'project_auth'
+- Generating pages -> 'designer_generate'
+- An auth-service app ('vanilla-js-auth' with the auth block from payload migrate): the plugin already sends the token, so that flow ends at 'designer_generate' without this tool
 
 NOTES:
-- Summarise what was retrofitted: which files were written, which pages got the auth guard, and
-  whether the plugin login artifacts were rendered as well.`,
+- Always installs js/rfx_auth.js, injects its script tag into existing pages (not the login page), and writes the embeddedAuth marker to payload/app-config.json.
+- When the UDF has an auth block on an auth-capable plugin, it also renders the plugin login (js/auth.js, login.html, js/login.js) and adds the appCode/authBaseUrl block to js/config.js; rfx_auth login.html/signup.html are not written in that case.
+- Idempotent. Existing files are skipped unless overwrite is set (archived first).
+- Defaults: frontendPath ./frontend/apps; apiBaseUrl from payload/app-config.json, fallback http://127.0.0.1:3000/api/<project>.
+- Summarise the files written, the pages that got the guard, and whether plugin login artifacts were rendered.`,
       inputSchema: {
         cwd: z
           .string()

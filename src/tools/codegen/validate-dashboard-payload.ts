@@ -34,30 +34,24 @@ export function registerCodegenValidateDashboardPayload(server: McpServer): void
     'codegen_validate_dashboard_payload',
     {
       title: 'Validate Dashboard Payload',
-      description: `Validate the structure of a dashboard payload WITHOUT generating any file, by wrapping restforge dashboard --validate-only=true. READ-ONLY: no file, database, or registry change; idempotent.
+      description: `Validate a dashboard payload without generating files, by running npx restforge dashboard --validate-only=true. Read-only and idempotent.
 
 USE WHEN:
-- The user asks to check a dashboard payload ("cek dashboard payload saya valid?", "apakah payload dashboard ini OK?")
-- A dashboard payload (with a 'widgets' array) was just authored or edited: pre-flight before 'codegen_create_dashboard'
-- 'codegen_create_dashboard' failed with a validation error and the payload is being fixed iteratively
+- The user asks whether a dashboard payload is valid ("cek dashboard payload saya valid?")
+- A payload with a 'widgets' array was just written or edited, before 'codegen_create_dashboard'
+- 'codegen_create_dashboard' failed validation and the payload is being fixed
 
 DO NOT USE FOR:
-- A CRUD payload (with 'tableName' and 'fieldName') -> 'codegen_validate_payload'
-- Generating the dashboard module -> 'codegen_create_dashboard'
-- Looking up the dashboard contract -> 'codegen_get_dashboard_catalog'
-- SQL semantics inside a widget query: only placeholders and structure are checked here; check a query with 'codegen_validate_sql'
-
-CHECKS: the CLI's DashboardValidator checks the widgets array shape, allowed/forbidden fields per level, the 'query' vs 'queries' mutual exclusion, the params contract (each ':placeholder' must be declared in 'params'), 'file:query/<name>.sql' resolution, and that no frontend-only fields (widgetType, layout, title, subtitle, color) leak in.
-
-PLATFORM VERSION: needs a @restforgejs/platform that provides 'dashboard create --validate-only' (added after 5.5.5). On an older platform the CLI answers "Unknown flag: --validate-only"; this tool reports that as an upgrade requirement, not a payload problem. In that case 'codegen_create_dashboard' runs the same validator before writing anything.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules (see the version requirement above).
-- The 'payload' value is passed verbatim and must carry '.json': the CLI looks for '<cwd>/payload/<payload>' then '<cwd>/<payload>'.
-- The dashboard name MUST start with 'dash-'; the argument parser checks it even in validate-only mode.
+- A CRUD payload (tableName, fieldName) -> 'codegen_validate_payload'
+- Generating the module -> 'codegen_create_dashboard'
+- The dashboard contract -> 'codegen_get_dashboard_catalog'
+- SQL inside a widget query -> 'codegen_validate_sql' (only structure and placeholders are checked here)
 
 NOTES:
-- Valid: confirm briefly and continue to generation when the user's request already covers it. Invalid: explain the specific error and help fix it.`,
+- Checks the widgets shape, allowed and forbidden fields, 'query' vs 'queries', that each :placeholder is declared in 'params', file:query/<name>.sql references, and that no frontend fields (widgetType, layout, title, subtitle, color) appear.
+- 'payload' must include .json, and the name must start with 'dash-'.
+- "Unknown flag: --validate-only" means the platform is too old (needs a version after 5.5.5); 'codegen_create_dashboard' still validates before writing.
+- When valid and the request covers generation, continue to 'codegen_create_dashboard'.`,
       inputSchema: {
         cwd: z
           .string()

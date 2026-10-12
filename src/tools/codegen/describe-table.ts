@@ -9,40 +9,25 @@ export function registerCodegenDescribeTable(server: McpServer): void {
     'codegen_describe_table',
     {
       title: 'Describe Database Table',
-      description: `Describe a single database table — columns (with dialect-specific types), primary key, foreign keys, and indexes — by wrapping restforge schema describe. Live introspection — the CLI connects to the database and queries the catalog.
+      description: `Describe one live database table (columns with dialect-specific types, primary key, foreign keys, indexes), by running npx restforge schema describe.
 
 USE WHEN:
-- The user asks about the columns, primary key, foreign keys, or indexes of a specific table
-- Pertanyaan dalam bentuk seperti "kolom apa saja di tabel X", "describe tabel sales_order", "show schema for users table", "tabel X punya FK ke mana", "ada index apa di tabel Y"
-- Before authoring a SQL JOIN — to discover the foreign key path between two tables and write the JOIN clause correctly
-- Before authoring a dashboard widget query — to confirm column names and types before composing the SELECT
-- The user wants to verify whether a specific column exists in a table
-- The user asks "what type is column X in table Y" — column type is dialect-specific so live introspection is more reliable than guessing
-- Before invoking 'codegen_create_dashboard' (with widget SQL) — to ground SQL identifiers in the live schema
-- After 'codegen_list_tables' returned a candidate name and the user wants the per-column details
+- The user asks about the columns, keys, or indexes of a table ("kolom apa saja di tabel X", "tabel X punya FK ke mana")
+- Before writing a SQL JOIN or dashboard widget query, to ground column names, types, and FK paths
+- Checking whether a column exists or what type it has
+- After 'codegen_list_tables' returned a candidate table
 
 DO NOT USE FOR:
-- Listing all tables in the database -> use 'codegen_list_tables'
-- Querying the actual row data inside a table -> out of scope; this tool returns metadata (columns, PK, FK, indexes) only, not row content
-- Validating a payload spec file against the database schema (file-level diff) -> use 'codegen_validate_payload' or 'codegen_diff_payload'
-- Modifying the schema (ALTER TABLE) -> edit the SDF, then 'codegen_dbschema_diff' and 'codegen_dbschema_apply'
-- Inspecting the SQL definition behind a database view -> out of scope; only column-level info is returned for views
-- Cross-database introspection (multiple databases at once) -> out of scope; a single config = a single connection
-
-Cross-reference: this tool is the sibling of 'codegen_list_tables'. Use list-tables first to discover candidate names, then describe-table for the per-column details.
-
-This tool runs: npx restforge schema describe --config=<config> --table=<table> [--include-foreign-keys=<bool>] [--include-indexes=<bool>] in the given cwd.
-The CLI connects to the database described in the config file, queries the catalog, and emits a JSON envelope with the table metadata.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist in the project and contain valid database credentials. This tool does not pre-check that — if the CLI fails, the failure response will surface the underlying cause.
-- The named table must exist in the database; otherwise the CLI fails with a "Table 'X' not found" error.
+- Listing all tables -> 'codegen_list_tables'
+- Row data -> out of scope (metadata only)
+- Comparing a payload file with the database -> 'codegen_validate_payload' / 'codegen_diff_payload'
+- Changing the table -> edit the SDF, then 'codegen_dbschema_diff' and 'codegen_dbschema_apply'
+- The SQL definition of a view -> out of scope (columns only)
 
 NOTES:
-- This is a live introspection: the tool actively queries the database catalog. The result reflects the schema state at query time.
-- Column types are dialect-specific (Postgres: 'character varying(N)', MySQL: 'varchar(N)', Oracle: 'VARCHAR2(N)'). Use the type as-is when the user asks about column constraints; do not normalise.
-- Foreign key 'references' field is the JOIN target — when the user asks "how do I join A and B", look at FK paths in both directions to compose the JOIN clause.`,
+- A missing table fails with "Table 'X' not found".
+- Report column types as returned (e.g. character varying(N), VARCHAR2(N)); do not normalise them.
+- For "how do I join A and B", follow FK 'references' in both directions.`,
       inputSchema: {
         cwd: z
           .string()

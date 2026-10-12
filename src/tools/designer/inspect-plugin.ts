@@ -8,30 +8,20 @@ export function registerDesignerInspectPlugin(server: McpServer): void {
     'designer_inspect_plugin',
     {
       title: 'Inspect Designer Plugin',
-      description: `Inspect the metadata of a single RESTForge Designer frontend plugin (its schema, fields, components, and configuration), by running npx restforge-designer plugins inspect for a given plugin id.
+      description: `Show the metadata of one RESTForge Designer plugin (declared schema, fields, components, configuration), by running npx restforge-designer plugins inspect. Read-only, no license needed.
 
 USE WHEN:
-- The user asks for the details, metadata, schema, or fields of one specific designer plugin
-- The user asks things like "detail plugin X", "metadata plugin", "schema plugin designer", "apa isi plugin vanilla-js-auth", "what's inside the vanilla-js-auth plugin", "tampilkan field plugin frontend ini", "show me the structure of plugin <id>"
-- Before authoring a UDF payload for a plugin, to learn which fields and components that plugin expects
-- The user names a specific plugin id and wants to understand what it provides
+- The user asks about one plugin ("apa isi plugin vanilla-js-auth", "schema plugin designer")
+- Learning which fields and components a plugin expects before writing a UDF for it
 
 DO NOT USE FOR:
-- Listing ALL available plugins -> use 'designer_list_plugins'
-- Validating a UDF payload against a plugin -> use 'designer_validate_payload'
-- Previewing the files a payload would generate -> use 'designer_preview_files'
-- The authoritative catalog of UDF structure and rules (valid field types, required appConfig fields, enums, limits) -> use 'designer_get_udf_catalog'
+- Listing all plugins -> 'designer_list_plugins'
+- Validating a UDF -> 'designer_validate_payload'
+- Previewing files -> 'designer_preview_files'
+- UDF rules (field types, required appConfig fields, enums, limits) -> 'designer_get_udf_catalog'
 
-This tool wraps the RESTForge Designer CLI command: npx restforge-designer plugins inspect --plugin=<plugin> [--plugins-dir=<pluginsDir>], run in the given cwd.
-The CLI resolves the named plugin (auto-detected, or from --plugins-dir) and prints its metadata. It does not modify any file and does not require a license.
-
-IMPORTANT — identity, not UDF structure:
-- This tool returns the IDENTITY/metadata of ONE plugin (its declared schema, fields, components, configuration). It is NOT the authoritative source of UDF structure and authoring rules. Do NOT infer the valid UDF field types, required appConfig fields, enums, or limits from this plugin metadata.
-- For the authoritative UDF structure and rules, use 'designer_get_udf_catalog' (serialized from the designer's own validator constants). Use plugin inspection to learn what a SPECIFIC plugin provides; use the catalog to learn the UDF rules that apply across the designer.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
+NOTES:
+- This returns the identity of one plugin, not the UDF rules. Do not infer valid field types or required fields from it; use 'designer_get_udf_catalog' for that.`,
       inputSchema: {
         cwd: z
           .string()

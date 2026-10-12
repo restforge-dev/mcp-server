@@ -9,34 +9,24 @@ export function registerCodegenListTables(server: McpServer): void {
     'codegen_list_tables',
     {
       title: 'List Database Tables',
-      description: `List all tables (and views) in the project's configured database, by wrapping restforge schema list. Live introspection — the CLI connects to the database and queries the catalog (information_schema in Postgres/MySQL, all_tables in Oracle).
+      description: `List the tables and views in the project's database, by running npx restforge schema list (live catalog query).
 
 USE WHEN:
-- The user asks "what tables exist in the database?" or any equivalent question
-- Pertanyaan dalam bentuk seperti "tabel apa saja yang ada di database", "list table di database project", "show me the tables", "ada tabel apa aja"
-- Before authoring any SQL query (dashboard widget query, ad-hoc query, CRUD payload generation) and the table catalog is unknown — ground the query in the live database state instead of guessing
-- Unsure whether a named table exists, or exploring an unfamiliar database before picking a target table
-- Filtering by schema or namespace ("tabel di schema public saja")
-- Before 'codegen_describe_table', to discover candidate table names
+- The user asks which tables exist ("tabel apa saja yang ada di database", "show me the tables")
+- Before writing SQL or generating a payload when the table catalog is unknown
+- Checking whether a named table exists, or exploring an unfamiliar database
+- Filtering by schema ("tabel di schema public saja")
 
 DO NOT USE FOR:
-- Detailed column / primary key / foreign key / index information for a specific table -> use 'codegen_describe_table'
-- Listing payload spec files on the filesystem (the payload/ folder) -> use generic Read or filesystem tools
-- Validating whether a payload file is in sync with the database -> use 'codegen_validate_payload'
-- Querying the actual row data inside tables -> out of scope; this tool returns only the table catalog (names + type), not row content
-- Modifying the database schema (CREATE/ALTER/DROP TABLE) -> edit the SDF, then 'codegen_dbschema_migrate' or 'codegen_dbschema_apply'
-- Listing schemas or databases themselves -> out of scope; this tool returns the tables WITHIN a schema, not the schemas themselves
-
-This tool runs: npx restforge schema list --config=<config> --format=json [--schema=<schema>] [--include-system=<bool>] in the given cwd.
-The CLI connects to the database described in the config file, queries the catalog, and emits a JSON envelope with summary counts and a tables array.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist in the project and contain valid database credentials. This tool does not pre-check that — if the CLI fails, the failure response will surface the underlying cause.
+- Columns, keys, or indexes of one table -> 'codegen_describe_table'
+- Payload files on disk -> file tools
+- Payload vs database sync -> 'codegen_validate_payload'
+- Row data -> out of scope
+- Changing tables -> edit the SDF, then 'codegen_dbschema_migrate' or 'codegen_dbschema_apply'
+- Listing schemas or databases themselves -> out of scope
 
 NOTES:
-- This is a live introspection: the tool actively queries the database catalog (information_schema in Postgres/MySQL, all_tables in Oracle). The result reflects the database state at query time.
-- Database type is auto-detected from the config file. The schema filter is dialect-aware (Postgres schema vs MySQL database vs Oracle owner) and uppercase is required for Oracle owners.`,
+- The dialect comes from the config. The 'schema' filter means a PostgreSQL schema, a MySQL database, or an Oracle owner (uppercase for Oracle).`,
       inputSchema: {
         cwd: z
           .string()

@@ -9,45 +9,21 @@ export function registerLicenseInfo(server: McpServer): void {
     'license_info',
     {
       title: 'Show License Info',
-      description: `Show the RESTForge license activation stored on this machine — license key, e-mail, type,
-machine id, last validation timestamp and expiry — by running npx restforge license info.
-Read-only: it reads the local activation state and does not change it.
+      description: `Show the RESTForge license activation on this machine (key, e-mail, type, machine id, last validation, expiry), by running npx restforge license info. Read-only; the output is plain text.
 
 USE WHEN:
-- A license error has to be diagnosed, e.g. 'setup_validate_config' failed on the license step
-  and the cause has to be narrowed down (not activated, wrong machine, expired)
-- The user asks things like "cek lisensi", "lisensi saya apa", "license info", "status license",
-  "sampai kapan lisensi berlaku", "license key yang aktif apa"
-- Before telling the user to re-activate, to confirm what is currently activated
+- Diagnosing a license error, e.g. 'setup_validate_config' failed on the license step (not activated, wrong machine, expired)
+- The user asks about the license ("cek lisensi", "sampai kapan lisensi berlaku")
+- Before telling the user to re-activate
 
 DO NOT USE FOR:
-- Validating the database, redis or kafka connections -> use 'setup_validate_config'
-- Writing or changing the license key in the config file -> use 'setup_update_env'
-- Releasing the activation on this machine -> NOT available through this server, see below
-
-This tool runs: npx restforge license info in the given cwd. The verb takes two tokens and no
-flags — it is handled by the runtime parser, not by the generator CLI, so extra flags would be
-ignored rather than rejected.
-
-Output: the command only prints a human-readable text block; there is no structured/JSON mode.
-This tool passes that text through unchanged, so read it directly rather than expecting fields.
-
-NOT WRAPPED ON PURPOSE — 'license deactivate':
-Releasing an activation is a mutation whose effect spans machines (it frees the seat held by
-this machine on the license server) and it cannot be undone from here. It is intentionally not
-exposed as a tool. When the user wants to deactivate, explain what it does and give them the
-command to run themselves in their terminal:
-  npx restforge license deactivate
-Do not run it through the Bash tool on the user's behalf.
-
-Preconditions:
-- The project folder must have @restforgejs/platform installed in node_modules. This tool
-  pre-checks that; if the package is missing, the response surfaces a non-error precondition.
+- Database, Redis, or Kafka checks -> 'setup_validate_config'
+- Changing the license key in the config -> 'setup_update_env'
+- Releasing the activation -> not available as a tool
 
 NOTES:
-- Summarise the state that answers the user's question (activated or not, type, expiry). Treat
-  the license key, e-mail and machine id as sensitive: repeat them only when the user asks for
-  them specifically.`,
+- 'license deactivate' frees this machine's seat on the license server and cannot be undone from here, so it is not wrapped. Explain it and give the user the command to run themselves: npx restforge license deactivate. Do not run it for the user.
+- Answer the question (activated or not, type, expiry). Repeat the key, e-mail, or machine id only when the user asks for them.`,
       inputSchema: {
         cwd: z
           .string()

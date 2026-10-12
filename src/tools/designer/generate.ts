@@ -8,40 +8,27 @@ export function registerDesignerGenerate(server: McpServer): void {
     'designer_generate',
     {
       title: 'Generate Designer Frontend',
-      description: `Generate frontend code from a UI Definition File (UDF) payload, by running npx restforge-designer generate. On an existing app it merges the new output into the files on disk and keeps user customizations.
+      description: `Generate frontend code from a UDF payload, by running npx restforge-designer generate. On an existing app it merges the new output into the files on disk and keeps user customizations.
 
-DESTRUCTIVE only with overwrite=true: every file is recreated from scratch and customizations in all files are discarded (the old files are archived). Confirm with the user before using it; a normal re-generate never needs it.
+DESTRUCTIVE only with overwrite=true: every file is recreated and customizations in all files are discarded (old files archived). Confirm with the user first; a normal re-generate never needs it.
 
 USE WHEN:
-- The user asks to generate / build the frontend application from a UDF payload
-- The user asks things like "generate aplikasi frontend dari UDF", "build frontend dari payload", "generate satu page/form" (scope=form), "generate the frontend code", "build the frontend from this UI definition", "generate frontend designer"
-- The user has a valid UDF payload and wants the real frontend files produced (not just a preview)
-- The user wants to generate a single page/form rather than the whole app (use scope=form with the page id)
+- The user asks to generate or build the frontend application from a UDF ("generate aplikasi frontend dari UDF")
+- Generating a single page/form (scope=form with the page id)
+- Bringing UDF changes into an existing app
 
 DO NOT USE FOR:
-- Previewing which files would be generated WITHOUT writing them -> use 'designer_preview_files'
-- Validating that the UDF payload is structurally correct -> use 'designer_validate_payload'
-- Initialising a new project from a plugin -> use 'designer_init_project'
-- Creating a new custom plugin from a template -> use 'designer_scaffold_plugin'
+- Listing the files that would be generated without writing -> 'designer_preview_files'
+- Checking the UDF structure -> 'designer_validate_payload'
+- Initialising a project from a plugin -> 'designer_init_project'
+- Creating a custom plugin -> 'designer_scaffold_plugin'
+- No UDF yet but a backend RDF exists -> 'codegen_migrate_payload' first
 
-This tool wraps the RESTForge Designer CLI command: npx restforge-designer generate --payload=<payload> --output=<output> [optional flags], run in the given cwd.
-The --payload and --output flags are always sent so the binary never drops into interactive prompt mode. Optional flags (plugin override, overwrite, scope, page, skip shared, plugins dir) are forwarded only when supplied; the binary defaults to scope 'app' when --scope is omitted.
-The recommended flow is read-before-write (§5.3): validate the payload, then preview the files, then generate.
-
-Re-generate behavior (existing output):
-- Without overwrite, existing files are merged three-way against the snapshot of the last generate (stored in <output parent>/.meta/<output folder>/). User customizations are kept and UDF changes on untouched lines are applied, for scope 'app' and 'form' alike.
-- A file whose edits clash with the new output is left untouched; the version with conflict markers goes to .meta/<app>/conflicts/<path> and the command exits 1 after all other files are processed.
-- Modified assets (CSS, vendor bundles, images) are kept with a warning. Files from an app generated before snapshots existed are kept when they differ, with the new version in conflicts/.
-- overwrite=true recreates every file from scratch; each existing file that differs is archived first. index.html without the RESTForge-Designer:LandingGenerated marker is never replaced and is reported as skipped.
-
-Cross-reference (grounding & on-ramp):
-- Before authoring or generating from a UDF, ground its shape (valid field types, required appConfig fields, enums, limits) against the designer's own rules via 'designer_get_udf_catalog' — the authoritative source of UDF structure.
-- If no UDF payload exists yet but the user has a backend RDF, the on-ramp is 'codegen_migrate_payload' (RDF -> split UDF set); validate and preview it before generating.
-- Canonical UDF flow: codegen_migrate_payload -> designer_get_udf_catalog -> designer_validate_payload -> designer_preview_files -> designer_generate.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response will surface that as a non-error precondition.`,
+NOTES:
+- Point 'payload' at the aggregator <appCode>.json. Recommended order: validate, preview, generate.
+- Without overwrite, files are merged three-way against the snapshot of the last generate in <output parent>/.meta/<output folder>/. A file whose edits clash is left untouched, its conflict version goes to .meta/<app>/conflicts/<path>, and the command exits 1 after the other files are processed: show the conflicts and generate again after they are resolved.
+- Modified assets (CSS, vendor bundles, images) are kept with a warning.
+- With overwrite, differing files are archived first. index.html without the RESTForge-Designer:LandingGenerated marker is never replaced.`,
       inputSchema: {
         cwd: z
           .string()

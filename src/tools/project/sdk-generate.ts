@@ -9,69 +9,26 @@ export function registerProjectSdkGenerate(server: McpServer): void {
     'project_sdk_generate',
     {
       title: 'Generate Project JavaScript SDK',
-      description: `Generate the JavaScript SDK source for one RESTForge project — a thin client layer over the
-generated REST API so a frontend can call client.<resource>.<verb>(payload) instead of
-hand-writing fetch/$.ajax boilerplate. Wraps npx restforge project sdk --generate.
+      description: `Generate the JavaScript SDK source for a RESTForge project, a client layer over the generated REST API (client.<resource>.<verb>(payload)), by running npx restforge project sdk --generate.
 
-DESTRUCTIVE only with force=true: the SDK folder is rewritten in place with NO archive backup, so local edits there are lost. Without force an existing SDK stops the run and nothing is written. Present force as an explicit choice to the user before using it.
+DESTRUCTIVE only with force=true: the SDK folder is rewritten in place with NO archive backup, so local edits there are lost. Without force an existing SDK (src/index.js present) stops the run and nothing is written. Present force as an explicit choice to the user.
 
 USE WHEN:
-- The user wants a JavaScript/TypeScript client for an already generated backend project
-- The user asks things like "generate SDK", "buatkan SDK untuk project", "bikin client SDK",
-  "generate JS client", "SDK untuk frontend"
-- The endpoint list or the auth status of the project changed and the SDK must be regenerated
-  (in that case pass force=true)
+- The user wants a JavaScript client for an already generated backend project ("generate SDK", "buatkan client SDK")
+- The endpoint list or the auth status of the project changed and the SDK must be regenerated (force=true, after the user agrees)
 
 DO NOT USE FOR:
-- Generating the backend endpoint module itself -> use 'codegen_create_endpoint' first;
-  the SDK is derived from what that command registered
-- Generating a frontend application -> use 'designer_generate'
-- Installing backend auth -> use 'project_auth' (run it BEFORE generating the SDK if the
-  project needs auth, see below)
-
-This tool runs: npx restforge project sdk --generate --project=<project> [optional flags],
-in the given cwd. The --generate flag is always passed (the CLI requires it as the trigger;
-without it the command exits with code 2). Optional flags (sdkPath, baseUrl, force) are
-forwarded only when supplied.
-
-What this command does:
-1. Reads metadata/<project>.json and keeps only endpoints of type "module"; the primary key of
-   each resource comes from payload/<slug>.json. If a registered endpoint has no payload file,
-   the whole generation is aborted before anything is written.
-2. Writes buildable SDK SOURCE into <sdkPath> (default: <cwd>/sdk): package.json,
-   tsup.config.js, deploy.mjs, sdk-client.js (with the base URL baked in), README.md and
-   src/ (core/, resources/ — one file per resource — and index.js with createClient()).
-3. Detects the backend auth extension (src/modules/<project>/rfx_auth.js). When present, the
-   SDK also gets client.auth (login/register/refresh/logout/getMe) plus core/auth-client.js
-   and core/storage.js, and attaches the bearer token to every resource call automatically.
-
-It only WRITES SOURCE — it does not run npm install or a build. Building and deploying stay
-with the user: cd <sdkPath> && npm install && npm run build && npm run deploy.
-
-Defaults:
-- sdkPath: <project root>/sdk (relative paths are resolved against cwd)
-- baseUrl: derived from the project's default config (SERVER_ADDRESS + SERVER_PORT +
-  /api/<project>, with 0.0.0.0 or empty mapped to 127.0.0.1). With no config found, it falls
-  back to http://127.0.0.1:3000/api/<project>.
-
-Overwrite behaviour (force):
-- The command guards on a single marker file, <sdkPath>/src/index.js. If that file exists and
-  force is not set, the CLI stops with exit code 1 and the message "An SDK already exists at
-  <dir> (found src/index.js). Use --force to overwrite." Nothing is written in that case.
-- With force=true the SDK files are rewritten IN PLACE, with NO archive backup (unlike
-  'codegen_create_endpoint', which archives). Local edits inside the SDK folder are lost.
-  Resource files of endpoints that no longer exist are NOT deleted, so stale resource files
-  can survive a forced regeneration; mention that when the resource list shrank.
-
-Preconditions:
-- The project folder must have @restforgejs/platform installed in node_modules. This tool
-  pre-checks that; if the package is missing, the response surfaces a non-error precondition.
-- The project must already be generated (metadata/<project>.json must exist). This tool does
-  NOT pre-check that; the CLI error surfaces the cause and lists the paths it looked in.
+- Generating the endpoint module itself -> 'codegen_create_endpoint' first; the SDK is derived from it
+- Generating a frontend application -> 'designer_generate'
+- Installing backend auth -> 'project_auth', run BEFORE the SDK when the project needs auth
 
 NOTES:
-- Summarise the output folder, the base URL, whether auth was included, and the resources
-  covered, then state the build/deploy steps the user has to run themselves.`,
+- Reads metadata/<project>.json (module endpoints only) and payload/<slug>.json for primary keys; a registered endpoint without a payload file aborts the run before writing.
+- Writes source only into sdkPath (default <cwd>/sdk). Building and deploying stay with the user: cd <sdkPath> && npm install && npm run build && npm run deploy.
+- When the backend auth extension exists, the SDK also gets client.auth and attaches the bearer token automatically.
+- baseUrl defaults to SERVER_ADDRESS + SERVER_PORT + /api/<project> from the default config, fallback http://127.0.0.1:3000/api/<project>.
+- A forced run does not delete resource files of removed endpoints; mention that when the resource list shrank.
+- Summarise the output folder, base URL, auth inclusion, and resources, then the build steps.`,
       inputSchema: {
         cwd: z
           .string()

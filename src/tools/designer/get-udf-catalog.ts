@@ -8,31 +8,22 @@ export function registerDesignerGetUdfCatalog(server: McpServer): void {
     'designer_get_udf_catalog',
     {
       title: 'Get UDF Catalog',
-      description: `Get the authoritative JSON catalog of RESTForge Designer UDF structure and rules (valid field types, editor modes, badge colors, id-generation options, navigation item types/depth limits, required appConfig fields, port range, number format, and dashboard widget/chart/data-source options), by running npx restforge-designer catalog. The catalog is serialized from the designer's own validator constants (single source of truth), so it stays in sync with the installed designer version and never drifts.
+      description: `Get the authoritative JSON catalog of RESTForge Designer UDF rules (field types, editor modes, badge colors, id generation, navigation item types and depth, required appConfig fields, port range, number format, dashboard widgets, charts, and data sources), by running npx restforge-designer catalog. It comes from the designer's own validator, so it matches the installed version.
 
 USE WHEN:
-- Before composing or editing a UDF payload — to ground valid field types and required fields against the designer's own rules
-- The user asks things like "tipe field UDF apa yang valid", "valid UDF field types", "struktur appConfig", "required appConfig fields", "aturan UDF designer", "enum UDF", "what badge colors are allowed", "apa yang boleh di dashboard widget", "which dashboard widgets/charts are available", "show me the UDF catalog"
-- 'designer_validate_payload' rejects a UDF payload and you need the authoritative shape (allowed enum values, required fields) to fix it
-- The user wants the catalog of dashboard widget types, chart engines, or data source methods for a designer UDF
+- Before composing or editing a UDF, to ground field types and required fields
+- The user asks about UDF rules ("tipe field UDF apa yang valid", "struktur appConfig", "which dashboard widgets are available")
+- 'designer_validate_payload' rejected a UDF and the allowed values are needed to fix it
 
 DO NOT USE FOR:
-- Validating a concrete UDF payload against a plugin -> use 'designer_validate_payload'
-- Reading the identity/metadata or schema of ONE specific plugin -> use 'designer_inspect_plugin'
-- Listing available designer plugins -> use 'designer_list_plugins'
-- The BACKEND field validation catalog (RDF payload fieldValidation constraints, data types, format presets) -> use 'codegen_get_field_validation_catalog'
+- Validating a concrete UDF -> 'designer_validate_payload'
+- One plugin's metadata or schema -> 'designer_inspect_plugin'
+- Listing plugins -> 'designer_list_plugins'
+- Backend RDF fieldValidation rules -> 'codegen_get_field_validation_catalog'
 
-This tool wraps the RESTForge Designer CLI command: npx restforge-designer catalog [--section=<fields|navigation|app-config|dashboard|all>], run in the given cwd.
-The catalog is a static constant (it does not depend on cwd) and the command does not modify any file and does not require a license.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks that by running
-  'npx restforge-designer --version'; if it cannot run, the response surfaces that as a non-error precondition.
-- The installed designer must be recent enough to support the 'catalog' command. Older designer builds do not have it; in
-  that case the response surfaces a non-error precondition suggesting the designer be updated.
-
-Cross-reference (read-before-write):
-- Call this tool BEFORE authoring or editing a UDF payload, and before generating frontend code, to ground the payload shape against the designer's own rules.`,
+NOTES:
+- 'section' limits the output: fields, navigation, app-config, dashboard, or all.
+- Read-only and needs no license. An older designer without the catalog command is reported as a precondition; suggest updating the package.`,
       inputSchema: {
         cwd: z
           .string()

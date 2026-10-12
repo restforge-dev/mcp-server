@@ -9,38 +9,23 @@ export function registerSetupValidateConfig(server: McpServer): void {
     'setup_validate_config',
     {
       title: 'Validate RESTForge Config',
-      description: `Validate the RESTForge license and connections to database, redis, and kafka based on the config file.
+      description: `Validate the RESTForge license and the database, Redis, and Kafka connections from a config file, by running npx restforge validate. Read-only unless autoCreateDb is set.
 
 USE WHEN:
-- The db-connection.env file has been filled in (license + DB credentials)
-- After credentials have been written or updated, to verify they actually work
-- Before starting runtime or codegen operations
-- Verifying license and access to external services before deploy
-- Diagnosing configuration issues
-- The user asks things like "test connection", "cek license", "validate config",
-  "apakah config sudah benar", "is the database reachable", "tes koneksi",
-  "verify the configuration", "cek apakah license valid"
-- Before validating, consider calling 'setup_read_env' to confirm what is
-  currently set — especially when the user describes the validation relative
-  to a recent change (e.g. "cek apakah license barunya valid"). // per §5.3
-- The user wants to validate CONFIGURATION (license, database connection, kafka, redis), not payload files
+- The config was just written or updated, to verify the credentials work
+- Before codegen or runtime work that takes 'config' (once per session)
+- The user asks to test the connection or license ("tes koneksi", "cek license", "apakah config sudah benar")
+- Diagnosing configuration problems
 
 DO NOT USE FOR:
-- Writing the config file -> use 'setup_write_env'
-- Adjusting individual fields -> use 'setup_update_env'
-- Generating module code -> use codegen_* domain tools
-- Checking if payload JSON files are still in sync with the database schema -> use 'codegen_validate_payload'
-
-Often called as the final step after 'setup_write_env' or 'setup_update_env'
-has filled in or changed credentials, to confirm that they actually work. // per §5.2
-
-This tool runs: npx restforge validate --config=<configFile> [--auto-create-db] in the given cwd.
-Without 'autoCreateDb' this tool is READ-ONLY and safe to call repeatedly.
-
-About 'autoCreateDb' (postgres/mysql only): when the target database does not exist yet, the CLI normally offers to create it. In this non-interactive context the CLI skips the creation and prints a hint that names the --auto-create-db flag. Setting autoCreateDb=true makes the CLI create the database instead, which is a WRITE operation on the database server — ask the user before enabling it. After a successful creation the CLI asks for a re-run, so validation has to be repeated to confirm the remaining components. The flag has no effect for sqlite (the file is created on first connect) or oracle (a service name, not a database), and the DB_USER needs the CREATE DATABASE privilege.
+- Writing the config -> 'setup_write_env'; changing single keys -> 'setup_update_env'
+- Payload files vs the database -> 'codegen_validate_payload'
+- License details on this machine -> 'license_info'
 
 NOTES:
-- The CLI output may contain license fragments, host names, or user names. Do not echo license keys, passwords, or full connection URIs into chat. Confirm validation status only.`,
+- When the user refers to a recent change ("cek apakah license barunya valid"), read the config with 'setup_read_env' first.
+- autoCreateDb (PostgreSQL/MySQL) creates a missing database, a write on the database server: ask the user first. The DB user needs CREATE DATABASE. After creation the CLI asks for a re-run, so validate again. It has no effect on SQLite or Oracle.
+- The output may contain license fragments, hosts, or user names. Never echo license keys, passwords, or connection URIs; report the status only.`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z

@@ -11,6 +11,8 @@
  *      DO NOT USE yang selesai sebelum karakter ke-1.900.
  *   3. Tool destruktif memuat penanda DESTRUCTIVE sebelum karakter ke-1.900.
  *   4. Tidak ada blok PRESENTATION GUIDANCE (aturan presentasi ada di skill).
+ *   5. Setiap deskripsi tool paling banyak 2.000 karakter, agar terbaca utuh.
+ *      Detail flag ditulis di describe() parameter, alur lintas tool di skill.
  *
  * Jalankan: npm run check:guidance. Dipanggil build-pack.mjs sebelum build rilis.
  * Opsi --report mencetak ukuran per tool tanpa mengubah exit code.
@@ -19,6 +21,7 @@ import { SERVER_INSTRUCTIONS, registerAllTools } from '../src/server.js';
 
 const INSTRUCTIONS_LIMIT = 2000;
 const ROUTING_LIMIT = 1900;
+const DESCRIPTION_LIMIT = 2000;
 
 // Tool yang mengubah atau menghapus data, file, atau project di luar kendali
 // undo. Deskripsinya wajib memuat peringatan DESTRUCTIVE di awal.
@@ -83,6 +86,7 @@ for (const { name, description } of tools) {
     if (warnIdx === -1 || warnIdx > ROUTING_LIMIT) errors.push(`${name}: penanda DESTRUCTIVE tidak ada sebelum karakter ${ROUTING_LIMIT}.`);
   }
   if (/PRESENTATION GUIDANCE/.test(description)) errors.push(`${name}: masih memuat PRESENTATION GUIDANCE.`);
+  if (description.length > DESCRIPTION_LIMIT) errors.push(`${name}: deskripsi ${description.length} karakter, batas ${DESCRIPTION_LIMIT}.`);
 
   if (report) {
     console.log(`${name.padEnd(42)} len=${String(description.length).padStart(5)} use=${String(useEnd).padStart(5)} dont=${String(dontEnd).padStart(5)}`);

@@ -39,51 +39,25 @@ export function registerCodegenDbschemaApply(server: McpServer): void {
     'codegen_dbschema_apply',
     {
       title: 'Apply Schema Drift Incrementally via ALTER',
-      description: `Resolve schema drift from dbschema-kit SDF files to the live database via incremental ALTER TABLE statements, by wrapping restforge schema apply. It is the safe alternative to 'codegen_dbschema_migrate' with drop=true. By default it is ADDITIVE-ONLY (ADD COLUMN, CREATE INDEX, ADD UNIQUE, ADD FOREIGN KEY); destructive changes are skipped with a warning unless opted in (allowDrop for DROP COLUMN/INDEX/UNIQUE/FOREIGN KEY, allowModify for ALTER COLUMN length/nullable and FK action changes).
+      description: `Apply schema drift from SDF files to the live database with incremental ALTER statements, by running npx restforge schema apply. It is the safe alternative to 'codegen_dbschema_migrate' with drop=true. By default it is additive only (ADD COLUMN, CREATE INDEX, ADD UNIQUE, ADD FOREIGN KEY); drops need allowDrop and column length/nullable or FK action changes need allowModify.
 
-DESTRUCTIVE when dryRun=false: runs ALTER statements on the live database. Call with dryRun=true first, show the preview, and confirm before the real apply. Pass allowDrop/allowModify ONLY when the user explicitly asked for that destructive change; never retry with them automatically.
+DESTRUCTIVE when dryRun=false: runs ALTER statements on the live database. Run 'codegen_dbschema_diff', then this tool with dryRun=true, show the preview, and apply only after the user confirms. Pass allowDrop/allowModify ONLY when the user explicitly asked for that change; never retry with them automatically.
 
 USE WHEN:
-- 'codegen_dbschema_diff' reported drift and the user wants the database brought in sync ("sinkronkan database dengan schema", "tambahkan kolom yang kurang ke database")
-- Evolving an existing populated database without recreating tables (data preserved)
-- A preview of the ALTER statements -> dryRun=true (safe path)
+- 'codegen_dbschema_diff' reported drift and the user wants the database in sync ("sinkronkan database dengan schema")
+- Evolving a populated database without recreating tables
+- Previewing the ALTER statements (dryRun=true)
 
 DO NOT USE FOR:
-- Detecting drift only -> 'codegen_dbschema_diff' (read-only)
+- Detecting drift only -> 'codegen_dbschema_diff'
 - Initial setup of an empty database -> 'codegen_dbschema_migrate'
-- Type, PK, default value, or CHECK changes, and the soft-delete consistency CHECK retrofit -> not supported (always skipped); suggest a manual SQL migration
+- Type, precision, primary key, default value, or CHECK changes -> never applied (reported as deferred); suggest a manual SQL migration
 - Validating SDF files -> 'codegen_dbschema_validate'
 
-RECOMMENDED WORKFLOW:
-1. Run 'codegen_dbschema_diff' first to see the drift.
-2. Run this tool with dryRun=true to preview the exact ALTER statements.
-3. Show the preview to the user and ask for confirmation.
-4. Only then run with dryRun=false to apply. Pass allowDrop/allowModify ONLY when the user explicitly asked for that destructive change — never to "make a warning go away".
-
-EXIT CODE SEMANTICS (important):
-- Exit 0 = success: every applicable drift was applied (or previewed in dry-run, or there was no drift). The output may still contain warnings for operations the platform defers (see below) — relay those.
-- Exit 1 = some drift was SKIPPED because it requires allowDrop or allowModify. This is a NORMAL, meaningful result — NOT a failure. In a real apply the additive statements WERE applied; only the skipped items remain. NEVER retry automatically with allowDrop/allowModify: those options drop or mutate data and need explicit user confirmation first.
-- Exit 2 = system error (invalid config, SDF load failure, connection failure, or apply failure). ROLLBACK means the database is unchanged; PARTIAL means some statements were applied and the database needs manual inspection.
-
-This tool runs: npx restforge schema apply --schema-path=<path> --config=<config> [--table=<name>] [--dry-run] [--allow-drop] [--allow-modify] in the given cwd. The output is a structured human-readable report (DDL preview or per-statement progress, Warnings, Summary) — there is no JSON mode.
-
-OPERATIONS NOT SUPPORTED by the platform yet (always skipped with a 'deferred' warning, regardless of opt-in flags):
-- ALTER COLUMN type change (needs a data conversion strategy per dialect)
-- ALTER COLUMN precision/scale change
-- DEFAULT value change
-- PRIMARY KEY changes (need a table rebuild)
-- CHECK constraint add/drop
-On SQLite, MODIFY/DROP COLUMN and ALL foreign key changes are additionally skipped ('sqlite limitation') even with opt-in flags; the sqlite dialect is rejected entirely by the default introspector.
-
-Soft-delete note: drift in the soft-delete consistency CHECK is detection-only. It is reported as a warning (never auto-applied) and does NOT by itself cause exit 1; the warning text suggests retrofitting via 'schema migrate --drop' (recreate) or adding the CHECK manually.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist and contain valid database credentials.
-- SDF files must exist at the given path. The --schema-path flag is required by the CLI.
-
 NOTES:
-- Exit 1 is NOT an error. Present it as: "these changes were applied/previewed, these were skipped because they would drop or modify existing data". Then ask the user whether they want the destructive part — do not decide for them.`,
+- Exit 0: all applicable drift applied or previewed. Exit 1: some drift was skipped because it needs allowDrop/allowModify; this is a normal result, the additive part was applied. Report what was applied and what was skipped, then ask the user about the skipped part. Exit 2: system error; ROLLBACK means the database is unchanged, PARTIAL means some statements ran and the database needs inspection.
+- SQLite also skips column modify/drop and all foreign key changes.
+- Soft-delete CHECK drift is reported as a warning only.`,
       inputSchema: {
         cwd: z
           .string()

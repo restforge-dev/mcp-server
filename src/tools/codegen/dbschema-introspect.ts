@@ -9,41 +9,25 @@ export function registerCodegenDbschemaIntrospect(server: McpServer): void {
     'codegen_dbschema_introspect',
     {
       title: 'Introspect Database into dbschema-kit Files',
-      description: `Reverse-engineer an existing database into dbschema-kit definition files (factory function pattern), by wrapping restforge schema introspect. Useful for migrating legacy projects to declarative schema-as-code, or for capturing the current database structure under version control. Mode (single-table, bulk single-schema, bulk multi-schema, all-schemas) is derived from the combination of 'table', 'schema', and 'allSchemas'.
+      description: `Reverse-engineer an existing database into SDF files (dbschema-kit factory functions), by running npx restforge schema introspect. The mode (single table, one schema, several schemas, all schemas) follows the combination of 'table', 'schema', and 'allSchemas'.
 
 USE WHEN:
-- The user asks to reverse-engineer a database, "buatkan schema dari database existing", "introspect DB ke schema files"
-- Pertanyaan dalam bentuk: "convert legacy DB ke dbschema", "extract schema from production DB", "buat schema-as-code dari DB yang sudah ada"
-- Migration project from a non-declarative DB to schema-as-code
-- Before refactoring an existing database — to capture the current state in version control
-- The user wants a starting point for the dbschema workflow but already has a populated database
-- Single-table snapshot for documentation or comparison
-- Multi-schema database where the user wants per-schema folder layout
-- Dry-run preview before committing to file write
+- The user wants schema files from an existing database ("buatkan schema dari database existing", "introspect DB ke schema files")
+- Moving a legacy database to schema-as-code, or capturing the current structure before refactoring
+- A dry-run preview before writing files
 
 DO NOT USE FOR:
-- Listing live database tables (no file write) -> use 'codegen_list_tables'
-- Describing a single live table (no file write) -> use 'codegen_describe_table'
-- Generating a CRUD payload from DB -> use 'codegen_generate_payload'
-- Validating an existing schema file -> use 'codegen_dbschema_validate'
-- Modifying database schema (CREATE/ALTER/DROP) -> use 'codegen_dbschema_migrate'
-- Querying actual row data -> out of scope (returns metadata only)
-
-This tool runs: npx restforge schema introspect --config=<file> --schema-path=<path> [--table=<name>] [--schema=<name>] [--all-schemas] [--force] [--dry-run] in the given cwd.
-The mode is derived by the CLI from the flag combination. The MCP layer passes flags through and does not validate mutual exclusivity — the CLI is the single source of truth for mode resolution.
-
-SOFT-DELETE STRICT BLOCK: on PostgreSQL, any table that has soft-delete columns (is_deleted/deleted_at/deleted_by) is validated against the soft-delete contract. A non-conforming table BLOCKS the whole introspect run with exit code 1 in three cases: (1) only a partial set of the three columns exists, (2) the columns exist but their types do not match the contract, or (3) the columns are complete and correctly typed but the consistency CHECK constraint is missing. The CLI error message starts with "[restforge] ERROR: introspect blocked for table '<name>'" and lists concrete mitigation options (complete the contract or drop the soft-delete columns; the missing-CHECK case includes a ready-to-run ALTER TABLE ... ADD CONSTRAINT statement). Relay that message and its options to the user — never report it as a generic failure. A fully conforming table introspects normally and the generated SDF carries softDelete: { enabled: true }.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist and contain valid database credentials.
-- 'schemaPath' is required for every mode. The CLI declares --schema-path as a required flag and rejects the call at parse level without it, even when 'dryRun' is true.
+- Listing tables or describing one table without writing files -> 'codegen_list_tables' / 'codegen_describe_table'
+- Generating an RDF payload -> 'codegen_generate_payload'
+- Validating an SDF file -> 'codegen_dbschema_validate'
+- Changing the database -> 'codegen_dbschema_migrate' / 'codegen_dbschema_apply'
+- Reading row data -> out of scope
 
 NOTES:
-- Mode is derived from the combination of 'table', 'schema', and 'allSchemas'. Confirm with the user before invoking — different modes produce different file layouts (flat vs subfolder).
-- Without 'force', the tool refuses to overwrite existing files. If the user wants to refresh introspection, confirm before passing force=true.
-- 'dryRun=true' is the safe path for preview. Suggest dry-run first when the user is exploring an unfamiliar database.
-- This is a write operation in non-dry-run mode. Files in the output target may have been created or overwritten.`,
+- 'schemaPath' is required in every mode, including dryRun.
+- Confirm the mode with the user: modes produce different layouts (flat files or one subfolder per schema).
+- Without force, existing files are not overwritten; confirm before passing force=true. Suggest dryRun=true first for an unfamiliar database.
+- PostgreSQL soft-delete check: a table with a partial or mistyped is_deleted/deleted_at/deleted_by set, or without the consistency CHECK, blocks the whole run with exit 1 and a message starting "[restforge] ERROR: introspect blocked for table". Relay the message and its mitigation options; it is not a generic failure. A conforming table gets softDelete: { enabled: true }.`,
       inputSchema: {
         cwd: z
           .string()

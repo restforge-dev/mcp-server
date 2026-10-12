@@ -9,30 +9,23 @@ export function registerDataPush(server: McpServer): void {
     'data_push',
     {
       title: 'Push Envelope Files into Database',
-      description: `Load rows from JSON envelope files (data-storage/<table>.json) INTO target database tables via batch INSERT, driven purely by SDF metadata, by wrapping restforge data push. This is APPEND-ONLY (no upsert/replace). Loads one table (--table), a schema or comma-separated schemas (--schema), or every table that has a file (--all-schemas). File names match 'data_pull' exactly, so pulled files can be pushed directly.
+      description: `Load rows from JSON envelope files (data-storage/<table>.json, as written by 'data_pull') into database tables with batch INSERT driven by the SDF, by running npx restforge data push --json.
 
 DESTRUCTIVE: writes rows into the target database and is append-only, so re-running inserts duplicates. Confirm the target config and tables with the user before calling.
 
 USE WHEN:
-- The user wants to import, load, seed, or restore table rows from envelope files into a database, e.g. "push data", "import data ke database", "load rows dari file", "seed data tabel"
-- The user is moving data between databases and has already exported files with 'data_pull' — push is the second half
-- The user wants a dialect-agnostic import based on the SDF
+- The user wants to import, seed, or restore rows from files ("push data", "seed data tabel", "import data ke database")
+- The second half of moving data between databases after 'data_pull'
 
 DO NOT USE FOR:
-- Exporting rows OUT of a database to files -> use 'data_pull'
-- Updating or replacing existing rows -> not supported; this is append-only INSERT and will add duplicate rows if run again
-- Creating the table SCHEMA itself -> use the dbschema tools
-
-This tool runs: npx restforge data push (--table | --schema | --all-schemas) [--config] [--schema-path] [--storage-path] [--batch-size] --json in the given cwd. The --json flag is always passed so the summary is machine-readable. There is intentionally NO force/overwrite/upsert option — the verb only appends.
-
-Scope (exactly ONE required): provide exactly one of 'table', 'schema', or 'allSchemas'. For schema/allSchemas, tables are loaded in topological FK order (parent before child).
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The envelope files must exist under the storage folder, and a database config must be resolvable. This tool does not pre-check these — if the CLI fails, the failure response surfaces the cause.
+- Exporting rows to files -> 'data_pull'
+- Updating or replacing rows -> not supported (no upsert)
+- Creating tables -> the dbschema tools
 
 NOTES:
-- The CLI prints a JSON summary; read it and tell the user how many rows/tables were inserted. Do not paste the raw JSON unless the user explicitly asks.`,
+- Give exactly one of 'table', 'schema' (one or comma-separated), or 'allSchemas'. Schema and allSchemas load tables in FK order.
+- allSchemas also pushes every other schema with files, such as the auth-service seed in schema auth; use 'schema' or 'table' to push application data only.
+- Report the inserted row and table counts from the summary; do not paste the raw JSON.`,
       inputSchema: {
         cwd: z
           .string()

@@ -9,25 +9,23 @@ export function registerCodegenGetDbschemaCatalog(server: McpServer): void {
     'codegen_get_dbschema_catalog',
     {
       title: 'Get dbschema-kit Catalog',
-      description: `Get the authoritative JSON catalog of the dbschema-kit defineModel API (the SDF syntax): defineModel options, field types and modifiers, constraints, relations (belongsTo, hasMany, hasOne), referential actions, check operations, audit columns, the soft-delete contract, shorthand syntax, naming rules, and dialect support (postgres/mysql/oracle/sqlite).
+      description: `Get the authoritative JSON catalog of the SDF syntax (dbschema-kit defineModel): options, field types and modifiers, constraints, relations, referential actions, checks, audit columns, soft-delete contract, shorthand syntax, naming rules, and dialect support. Sourced from the installed platform, so use it as ground truth and do not invent syntax.
 
 USE WHEN:
-- Before writing or editing schema/<table>.js, once its fields are settled with the user (or the design was handed over): request only the sections the file needs (e.g. section=fieldTypes, shorthandSyntax, auditColumns, relationTypes), once per session
-- The user asks about SDF syntax: \`defineModel\`, shorthand like \`string:36 pk\` or \`decimal:15,2 default:0\`, field types, relations, \`unique\`/\`checks\`, \`onDelete\`/\`onUpdate\`, the legacy \`fk:\` token ("bagaimana sintaks defineModel", "field type apa saja")
-- The user asks about audit columns (created_at, created_by, updated_at, updated_by) or soft-delete in the schema layer (section=softDelete)
-- The user asks which dialects are supported
+- Before writing or editing schema/<table>.js, once the fields are settled: request only the sections the file needs (e.g. fieldTypes, shorthandSyntax, auditColumns, relationTypes), once per session
+- The user asks about SDF syntax: defineModel, shorthand such as 'string:36 pk' or 'decimal:15,2 default:0', relations, unique, checks, onDelete ("field type apa saja")
+- Audit columns or soft-delete in the schema layer (section=softDelete)
+- Which dialects are supported
 
 DO NOT USE FOR:
 - Validating a schema file -> 'codegen_dbschema_validate'
-- Listing models, generating DDL, migrating, or introspecting -> 'codegen_dbschema_models' / 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_introspect'
-- RDF payload rules -> 'codegen_get_field_validation_catalog' / 'codegen_get_query_declarative_catalog'; dashboard spec -> 'codegen_get_dashboard_catalog'
-- Live database tables -> 'codegen_list_tables' / 'codegen_describe_table'
+- Listing models, DDL, migrate, introspect -> 'codegen_dbschema_models' / 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_introspect'
+- RDF rules -> 'codegen_get_field_validation_catalog' / 'codegen_get_query_declarative_catalog'; dashboard spec -> 'codegen_get_dashboard_catalog'
+- Live tables -> 'codegen_list_tables' / 'codegen_describe_table'
 
-PK/FK CONVENTION: UUID primary keys and the foreign keys that reference them are string:36 (the uuid type only appears in SDF introspected from native UUID columns). Foreign keys are declared in relations as belongsTo entries (localKey, references, onDelete); never write the inline fk: shorthand, which the parser still accepts only for existing schema files.
-
-SOFT-DELETE SECTION: documents the three contract columns (is_deleted/deleted_at/deleted_by, biconditional with softDelete.enabled), the reusable unique-column rules (string/text + single-column UNIQUE + physical length >= base length + 38), the UNIQUE eligibility gate (composite and non-string UNIQUEs rejected), the emitted DDL (CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes), and dialect support (Phase 1: PostgreSQL only).
-
-This tool runs: npx restforge catalog dbschema [--section=<X>] [--name=<Y>] [--kind=<Z>] in the given cwd. The catalog is sourced from restforge (single source of truth), so it matches the installed dbschema-kit version. Use it as ground truth: do not invent flags or behaviour that are not in the catalog.`,
+NOTES:
+- PK/FK convention: UUID primary keys and the foreign keys that reference them are string:36 (the uuid type only appears in introspected SDF). Foreign keys go in relations as belongsTo entries (localKey, references, onDelete); never write the inline fk: shorthand.
+- Soft-delete (PostgreSQL only): is_deleted, deleted_at, and deleted_by exist exactly when softDelete.enabled is true; reusable unique columns need a single-column string UNIQUE with length >= base + 38.`,
       inputSchema: {
         cwd: z
           .string()

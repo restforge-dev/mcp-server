@@ -8,45 +8,23 @@ export function registerDesignerAuthRemove(server: McpServer): void {
     'designer_auth_remove',
     {
       title: 'Remove Embedded Frontend Auth',
-      description: `Remove embedded auth (rfx_auth) from a RESTForge frontend project — deletes login.html,
-signup.html, js/rfx_auth.js, strips the auth guard from all app pages, and removes the
-embeddedAuth marker from payload/app-config.json.
+      description: `Remove embedded auth (rfx_auth) from a frontend project, by running npx restforge-designer auth --remove --force. It deletes login.html, signup.html, and js/rfx_auth.js, strips the guard script from every page, and removes the embeddedAuth marker from payload/app-config.json.
 
-DESTRUCTIVE: deletes the auth files and strips the guard from every page. ALWAYS confirm with the user before calling, naming the project and what will be deleted.
+DESTRUCTIVE: deletes the auth files and strips the guard from every page; --force skips the CLI prompt. ALWAYS confirm with the user before calling, naming the project and what will be deleted.
 
 USE WHEN:
-- The user wants to remove/uninstall embedded auth from a frontend project
-- The user asks things like "hapus auth frontend", "uninstall rfx_auth", "cabut auth embedded",
-  "remove embedded auth", "balikin ke sebelum pasang auth"
-- The frontend project has embedded auth installed (via 'designer_auth_create')
+- The user wants to remove embedded auth ("hapus auth frontend", "uninstall rfx_auth")
+- The project has auth installed by 'designer_auth_create'
 
 DO NOT USE FOR:
-- Installing embedded auth -> use 'designer_auth_create'
-- Removing the vanilla-js-auth plugin -> out of scope (different mechanism)
-- Backend auth removal -> out of scope (no equivalent CLI command)
-
-This tool wraps: npx restforge-designer auth --remove --project=<project> [--frontend-path] --force,
-run in the given cwd.
-
-IMPORTANT — confirmation behaviour: the CLI normally prompts for y/N confirmation before removing.
-In this non-interactive MCP context, --force is ALWAYS passed to skip the prompt.
-ALWAYS confirm with the user that they intend to remove auth before calling this tool.
-
-What this command does (in order):
-1. Detects whether auth is installed (checks files + embeddedAuth marker)
-2. Deletes login.html, signup.html, js/rfx_auth.js
-3. Strips the auth guard <script src="js/rfx_auth.js"> from all *.html pages (other content untouched)
-4. Removes the embeddedAuth key from payload/app-config.json (other keys preserved)
-
-Idempotent: no-op if auth is not installed; running --remove twice is safe.
-
-Preconditions:
-- RESTForge Designer is invoked via 'npx restforge-designer' (the binary is bundled with the @restforgejs/platform package). This tool pre-checks
-  that by running 'npx restforge-designer --version'.
+- Installing embedded auth -> 'designer_auth_create'
+- Removing the vanilla-js-auth plugin -> out of scope
+- Backend auth removal -> out of scope
 
 NOTES:
-- Summarise what was removed: files deleted, pages unguarded, marker removed.
-- When auth was not installed (no-op), tell the user clearly.`,
+- Other page content and other app-config keys are untouched.
+- When auth is not installed nothing happens; tell the user clearly.
+- Summarise the files deleted, pages unguarded, and marker removed.`,
       inputSchema: {
         cwd: z
           .string()

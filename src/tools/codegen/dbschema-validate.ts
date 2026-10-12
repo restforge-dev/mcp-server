@@ -9,39 +9,28 @@ export function registerCodegenDbschemaValidate(server: McpServer): void {
     'codegen_dbschema_validate',
     {
       title: 'Validate dbschema-kit Files',
-      description: `Validate dbschema-kit schema definition files (SDF) by wrapping restforge schema validate: single-model checks (defineModel structure, field types, length, nullable, primary key, default compatibility) and cross-model checks (FK target table and column, PK for belongsTo). With 'config' it also compares each model with the live database.
+      description: `Validate SDF schema files (defineModel structure, field types, length, nullable, primary key, defaults, FK targets, soft-delete contract), by running npx restforge schema validate. With 'config' it also compares each model with the live database.
 
 USE WHEN:
 - The user asks to validate schema files ("validasi schema saya", "cek apakah schema valid")
-- Right after authoring or editing schema/<table>.js, before generating DDL or migrating
-- The user asks whether an FK or relation is correct, or wants a check after introspection
-- The user wants one verdict per table that also covers the database ("schema valid dan sesuai database?") -> pass config
+- Right after writing or editing schema/<table>.js, before generating DDL or migrating
+- Checking an FK or relation, or after introspection
+- One verdict per table that also covers the database ("schema valid dan sesuai database?") -> pass config
 
 DO NOT USE FOR:
-- CRUD payload (RDF) files -> 'codegen_validate_payload'; dashboard payloads -> 'codegen_validate_dashboard_payload'
+- RDF payload files -> 'codegen_validate_payload'; dashboard payloads -> 'codegen_validate_dashboard_payload'
 - SQL statements -> 'codegen_validate_sql'
 - Syntax lookup -> 'codegen_get_dbschema_catalog'
 - Generating or applying DDL -> 'codegen_dbschema_generate_ddl' / 'codegen_dbschema_migrate' / 'codegen_dbschema_apply'
-- A detailed per-column drift report -> 'codegen_dbschema_diff'
+- A per-column drift report -> 'codegen_dbschema_diff'
 
-TWO MODES:
-- File only (config omitted): validates the files and cross-model relations; the database is not contacted. The project's default config is NOT used, so omitting config always means file-only.
-- File and database (config given): validates the files, then compares each model with its table. One verdict per model: [OK] (valid and in sync), [DRIFT] (valid, but columns, types, indexes, uniques, or FKs differ), [ERROR] with category table-missing (not created yet; migrate or apply fixes it) or sdf-invalid (file failed validation, not compared).
-
-The table parameter limits the report to one table in both modes. All files are still loaded because FK validation needs the target models; relation issues are reported under the owning table.
-
-SOFT-DELETE: the softDelete block is strict (only enabled and reusable). The three contract columns (is_deleted boolean, deleted_at timestamp, deleted_by string) are biconditional with softDelete.enabled = true; missing columns, wrong types, or columns without enabled=true are ERRORs. Each reusable entry must reference a declared string/text field with a single-column UNIQUE and physical length >= base length + 38; with soft-delete enabled, composite UNIQUEs and non-string single-column UNIQUEs are rejected. These checks run at schema load, so validate, generate-ddl, and migrate enforce them identically.
-
-This tool runs: npx restforge schema validate --schema-path=<path> [--config=<file>] [--table=<name>] [--json] in the given cwd.
-
-EXIT CODE SEMANTICS:
-- Exit 0 = everything OK.
-- Exit 1 = validation errors (file-only), or at least one DRIFT/ERROR verdict (file and database). In file and database mode this is a meaningful result, not a tool failure.
-- Exit 2 = config invalid, database connection failed, or the table name is not in the SDF.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- --schema-path is mandatory (e.g. './schema' or 'schema/users.js'); the CLI has no default. Confirm the path with the user when it was not mentioned.`,
+NOTES:
+- 'schemaPath' is required (e.g. ./schema or schema/users.js); confirm it with the user when not mentioned.
+- Without 'config' the run is file-only; the default config is NOT used.
+- With 'config', each model gets [OK], [DRIFT] (valid but differs from the table), or [ERROR] with table-missing (migrate or apply fixes it) or sdf-invalid.
+- 'table' limits the report to one table; all files are still loaded for FK checks.
+- Exit 0: all OK. Exit 1: validation errors, or a DRIFT/ERROR verdict; with config this is a result, not a tool failure. Exit 2: config invalid, connection failed, or table not in the SDF.
+- Soft-delete: is_deleted, deleted_at, and deleted_by must all exist with the right types exactly when softDelete.enabled is true. Reusable unique columns need a single-column string UNIQUE with length >= base + 38.`,
       inputSchema: {
         cwd: z
           .string()

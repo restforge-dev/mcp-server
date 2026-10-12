@@ -45,31 +45,23 @@ export function registerCodegenCreateProcessor(server: McpServer): void {
     'codegen_create_processor',
     {
       title: 'Create Processor Module',
-      description: `Generate a processor (a background job / custom business-logic handler) from a payload JSON file, by wrapping restforge processor create. The processor exposes an endpoint whose router + metadata is always regenerated, while the implementation file holds the custom business logic.
+      description: `Generate a processor (custom business-logic handler or background job exposed as an endpoint) from a processor payload, by running npx restforge processor create. The router and metadata are always regenerated; the implementation file holds the custom logic.
 
 USE WHEN:
-- The user wants to create or scaffold a processor, background job, or custom business-logic handler from a processor payload, e.g. "buat processor", "generate processor", "create background job", "scaffold business logic handler"
-- The user has a processor payload JSON and wants the matching code generated into a backend project
-- The user wants to re-generate a processor's routing while keeping their hand-written logic (re-run WITHOUT force preserves custom code)
+- The user wants a processor, background job, or custom logic handler ("buat processor", "generate processor")
+- A processor payload exists and its code should be generated
+- Refreshing a processor's routing while keeping hand-written logic (run without force)
 
 DO NOT USE FOR:
-- Generating a standard REST endpoint from a payload -> use 'codegen_create_endpoint'
-- Generating a dashboard endpoint -> use 'codegen_create_dashboard'
-- Generating a Kafka consumer -> use 'codegen_create_kafka_consumer'
-- Generating a backend payload from a database table -> use 'codegen_generate_payload'
-
-This tool runs: npx restforge processor create --project=<project> --name=<name> --payload=<payload> [--database] [--force] [--skip-sql-validation] in the given cwd.
-
-Re-run behavior (important):
-- WITHOUT 'force': the endpoint router + metadata are regenerated, but the processor implementation file is SKIPPED ("custom code preserved") — safe to re-run to refresh routing without losing hand-written logic.
-- WITH 'force': the implementation file is archived first, then overwritten with a fresh scaffold — custom code survives only in the archive.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The named processor payload JSON must exist at <cwd>/payload/<name>.json (or <cwd>/<name>.json). This tool pre-checks it using the same resolution the CLI applies: the '.json' extension is optional in the parameter, the name is lowercased, and path forms are rejected.
+- A standard CRUD endpoint -> 'codegen_create_endpoint'
+- A dashboard -> 'codegen_create_dashboard'
+- A Kafka consumer -> 'codegen_create_kafka_consumer'
+- A payload from a table -> 'codegen_generate_payload'
 
 NOTES:
-- If the user wants to overwrite existing custom implementation, warn that without archiving they would lose hand-written logic; 'force' archives the old file before overwriting.`,
+- Without force, an existing implementation file is skipped ("custom code preserved").
+- With force, the implementation file is archived, then replaced by a fresh scaffold; custom code survives only in the archive. Warn the user before using force.
+- The payload must exist at <cwd>/payload/<name>.json; .json is optional, the name is lowercased, and path forms are rejected.`,
       inputSchema: {
         cwd: z
           .string()

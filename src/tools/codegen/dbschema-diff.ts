@@ -81,45 +81,27 @@ export function registerCodegenDbschemaDiff(server: McpServer): void {
     'codegen_dbschema_diff',
     {
       title: 'Diff dbschema-kit Files Against Database',
-      description: `Detect schema drift between dbschema-kit SDF files and the live database structure (read-only, bidirectional), by wrapping restforge schema diff. The CLI loads the SDF files, introspects the matching tables in the database, and reports differences in both directions: only-in-SDF (declared but missing in the database), only-in-DB (present in the database but not declared), and mismatched (present on both sides but different). Nothing is written to the database or the filesystem.
+      description: `Detect drift between SDF files and the live database in both directions (only-in-SDF, only-in-DB, mismatched), by running npx restforge schema diff --json. Read-only: nothing is written to the database or files.
 
 USE WHEN:
-- The user asks "is my schema in sync with the database?", "apakah schema saya sinkron dengan database?", "ada drift nggak?", "cek drift schema"
-- After editing SDF files — to check the impact against the live database before deciding what to apply
-- After a manual database change (e.g. an ad-hoc ALTER) — to see how far the database diverged from the SDF source
-- Before running 'codegen_dbschema_migrate' on an existing database — to know what differs first
-- The user wants a safe read-only comparison without modifying anything
-- Periodic drift audit of an environment (staging/production) against the SDF folder
+- The user asks whether the schema is in sync ("apakah schema saya sinkron dengan database?", "cek drift schema")
+- After editing SDF files, before deciding what to apply
+- After a manual database change, or before 'codegen_dbschema_migrate' on an existing database
+- A periodic drift audit of an environment
 
 DO NOT USE FOR:
-- Applying the detected drift to the database -> use 'codegen_dbschema_apply', the incremental complement of this diff (additive ALTER by default; destructive changes need explicit opt-in).
-- Full CREATE/DROP deployment of a schema -> use 'codegen_dbschema_migrate' (full apply, mutates the database — a different operation from drift detection)
-- Validating SDF file correctness without a database -> use 'codegen_dbschema_validate'
-- Reverse-engineering SDF files from the database -> use 'codegen_dbschema_introspect'
-- Listing tables or describing a single table -> use 'codegen_list_tables' / 'codegen_describe_table'
-- Comparing RDF payload files against the database -> use 'codegen_diff_payload'
-
-EXIT CODE SEMANTICS (important):
-- Exit 0 = no drift; schema and database are in sync.
-- Exit 1 = drift detected. This is a NORMAL, meaningful result — NOT a failure. The response summarises the drift; treat it as the answer to "is my schema in sync?".
-- Exit 2 = system error (invalid config, connection failure, schema path not found, SDF load error).
-
-This tool runs: npx restforge schema diff --schema-path=<path> --config=<config> --json [--table=<name>] in the given cwd. The --json flag is always sent; the tool parses the JSON drift report (version, summary, per-table sections).
-
-Soft-delete note: the diff is soft-delete aware but non-strict. Drift in the softDelete block is reported as-is in the table's softDelete section without blocking the diff — unlike introspect, which can block on a broken soft-delete contract.
-
-Limitations:
-- The sqlite dialect is not supported by schema diff.
-- A table declared in SDF but absent in the database is reported as only-in-SDF drift, not as an error.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist and contain valid database credentials.
-- SDF files must exist at the given path. The --schema-path flag is required by the CLI.
+- Applying the drift -> 'codegen_dbschema_apply'
+- Full CREATE/DROP deployment -> 'codegen_dbschema_migrate'
+- Validating SDF files without a database -> 'codegen_dbschema_validate'
+- SDF from a database -> 'codegen_dbschema_introspect'
+- Listing or describing tables -> 'codegen_list_tables' / 'codegen_describe_table'
+- RDF payload vs database -> 'codegen_diff_payload'
 
 NOTES:
-- Drift detected is NOT an error. Present it as a factual comparison result: which tables drifted and in which direction (only-in-SDF / only-in-DB / mismatched).
-- This is a read-only live comparison: the database is introspected at diff time and never modified.`,
+- Exit 0: in sync. Exit 1: drift detected; this is the answer, not a failure: report which tables drifted and in which direction. Exit 2: system error (config, connection, schema path, SDF load).
+- A table declared in SDF but missing in the database is only-in-SDF drift.
+- Soft-delete drift is reported in the table's softDelete section without blocking.
+- SQLite is not supported.`,
       inputSchema: {
         cwd: z
           .string()

@@ -9,37 +9,24 @@ export function registerCodegenSyncPayload(server: McpServer): void {
     'codegen_sync_payload',
     {
       title: 'Sync Payload',
-      description: `Apply schema drift to existing RDF payload files, archiving the previous version of each updated file, by running restforge payload sync. With expandFk=true it also adds JOIN columns from referenced tables to datatables.
+      description: `Apply schema drift to existing RDF payload files, by running npx restforge payload sync. Each changed file is archived to '.restforge/archive/<run>/' first (5 most recent runs kept); files in sync are untouched. With expandFk=true it also adds JOIN columns from referenced tables to datatables.
 
 USE WHEN:
-- The user asks to sync payload files with the database or apply schema drift ("sinkronisasi payload", "samakan payload dengan database", "terapkan perubahan schema")
-- After 'codegen_diff_payload' showed differences the user wants applied, or after a table was altered
-- The user wants columns from a referenced table in datatables ("tampilkan nama supplier di datatables", "kolom join di datatables", "expand foreign key") -> expandFk=true with table
-- Consider 'codegen_diff_payload' first so the user sees what will change; sync overwrites the active payload and archives the old one
+- The user wants payload files synced with the database ("samakan payload dengan database", "terapkan perubahan schema")
+- 'codegen_diff_payload' showed differences the user wants applied, or a table was altered
+- The user wants columns of a referenced table in datatables ("tampilkan nama supplier di datatables") -> expandFk=true with 'table'
 
 DO NOT USE FOR:
 - Only checking which payloads drifted -> 'codegen_validate_payload'
-- Per-column differences without applying them -> 'codegen_diff_payload'
+- Per-column differences without applying -> 'codegen_diff_payload'
 - A table with no payload yet -> 'codegen_generate_payload'
-- Cleaning up archived files in '.restforge/archive/' (manual task; the 5 most recent runs are kept automatically)
 
-FK EXPANSION (expandFk):
-- Opt-in and REQUIRES 'table'. Without it, sync is pure schema drift.
-- The CLI builds a JOIN from the table's foreign keys, writes query/<table>-join.sql, and repoints datatablesQuery/viewQuery at it. The generator never produces join columns; this is the path.
-- 'fkColumns' (optional): QUALIFIED 'table.column' list (e.g. 'supplier.supplier_code,supplier.supplier_name'). Omitted: the display column per FK is auto-resolved (name/nama -> code/kode -> number/nomor/no/num -> title/judul/label -> first UNIQUE text column). The PK is never a display column.
-- 'expandFkSkip' (optional): referenced tables to leave out ('ref_table', or 'local_fk_col:ref_table' for one of several FKs to the same table).
-- When a referenced table has no display candidate, the CLI fails with "No natural display column found for referenced table ..." and lists the columns. Ask the user which column to show or whether to skip that relation, then retry with 'fkColumns' or 'expandFkSkip'. Do not pick a column for the user.
-- A table without foreign keys gets no JOIN; relay that.
-
-CHECK CONSTRAINTS (schemaPath):
-- The CLI reads the SDF files (default folder 'schema') and derives CHECK constraints into fieldValidation (enum, min, max, notEqual) plus the checkConstraints registry. A payload already in sync with the database is still updated when these derived values are missing ("CHECK constraints derived from SDF").
-- Pass 'schemaPath' only when the SDF is not in 'schema'. Without an SDF this derivation is skipped and existing values are kept.
-
-This tool runs: npx restforge payload sync --config=<config> [--table=<table>] [--schema-path=<path>] [--expand-fk [--fk-columns=table.col,table.col] [--expand-fk-skip=table,table]] in the given cwd. Each drifted payload is first moved to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept); files in sync are not touched. The CLI prints per-file status ([SKIP], [ARCHIVE], [SYNCED]) and a Summary. If a run fails partway, the CLI restores the archived file so the active payload is not left corrupted.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist with valid database credentials; a CLI failure surfaces the cause.`,
+NOTES:
+- expandFk requires 'table'. It writes query/<table>-join.sql and points datatablesQuery/viewQuery at it; this is the only way to get JOIN columns.
+- fkColumns takes qualified 'table.column' values; when omitted, one display column per FK is picked (name/nama, code/kode, number/no, title/label, then the first UNIQUE text column; never the PK). expandFkSkip leaves out 'ref_table' or 'local_fk_col:ref_table'.
+- "No natural display column found for referenced table ..." means the user must choose: ask which column to show or whether to skip the relation, then retry with fkColumns or expandFkSkip. Do not choose for the user.
+- CHECK constraints from the SDF (default folder 'schema', or 'schemaPath') are derived into fieldValidation and checkConstraints, even for payloads otherwise in sync.
+- A failed run restores the archived file.`,
       inputSchema: {
         cwd: z
           .string()

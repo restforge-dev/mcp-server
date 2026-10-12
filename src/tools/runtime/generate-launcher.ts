@@ -214,36 +214,24 @@ export function registerRuntimeGenerateLauncher(server: McpServer): void {
     'runtime_generate_launcher',
     {
       title: 'Generate RESTForge Launcher Script',
-      description: `Generate a launcher script for the RESTForge Server in the project root. This tool does NOT run the server — it produces a .bat or .sh script that the user must execute themselves. This is intentional: a server launched by the AI session would terminate when the session ends; a script executed by the user lives in the user's terminal/session and persists independently.
-
-Files produced (depending on os + mode) — file names are FIXED, not user-customisable:
-- windows + host: server-start.bat, server-stop.bat
-- windows + pm2:  server-start.bat (calls 'pm2 start ecosystem.config.js'), server-stop.bat, ecosystem.config.js
-- linux + host:   server-start.sh, server-stop.sh
-- linux + pm2:    server-start.sh (calls 'pm2 start ecosystem.config.js'), server-stop.sh, ecosystem.config.js
-
-For host mode the start script runs 'npx restforge ...' in the foreground (or 'exec' on Linux). The stop script kills the process by port via netstat/taskkill on Windows or lsof/fuser+kill on Linux — no PID file is required. For PM2 mode the ecosystem points 'script' directly at './node_modules/@restforgejs/platform/server.js' to bypass the npx shim and avoid PM2's default node interpreter mis-parsing a .cmd file.
+      description: `Write a launcher script for the RESTForge Server in the project root. This tool does NOT run the server: the user runs the script, so the server outlives the AI session.
 
 USE WHEN:
-- The user asks "run the server", "jalankan server", "start RESTForge"
-- After confirming OS, mode, project, config, and port with the user (typically via 'runtime_detect_project', 'runtime_detect_config', and direct questions)
-- After 'runtime_check_launcher_exists' returned no conflicts, OR the user confirmed overwrite
+- The user asks to run or start the server ("jalankan server", "start RESTForge")
+- After OS, mode, project, config, and port are settled (via 'runtime_detect_project', 'runtime_detect_config', or the user)
+- After 'runtime_check_launcher_exists' found no conflict, or the user confirmed overwrite
 
 DO NOT USE FOR:
-- Actually starting or stopping the server -> the user runs the generated script themselves
-- Modifying database schema or payload files -> out of scope
-- Running one-off commands -> out of scope; this tool is launcher-scaffolding only
-
-Preconditions:
-- The cwd must exist.
-- 'cluster' and 'workers' are mutually exclusive.
-- 'watch' is not allowed with mode=pm2.
+- Starting or stopping the server -> the user runs the script
+- A Kafka consumer -> 'runtime_generate_consumer_launcher'
+- Schema, payload, or one-off commands -> out of scope
 
 NOTES:
-- Tell the user clearly that the AI does NOT execute the script — they must run it themselves so the server keeps running after the AI session ends.
-- For PM2 mode: warn the user that PM2 must be installed globally first (npm install -g pm2). Do not auto-install.
-- After generation, summarise: location, files produced, how to start, how to stop. Do not paste the JSON envelope unless explicitly asked.
-- If the user asks for a different mode (Windows Service, Docker, systemd) — those are out of scope V1; suggest using host or pm2 instead.`,
+- File names are fixed: server-start and server-stop (.bat on Windows, .sh on Linux), plus ecosystem.config.js for mode=pm2.
+- Host mode runs npx restforge serve in the foreground; the stop script kills the process on the port. PM2 mode points the ecosystem at node_modules/@restforgejs/platform/server.js.
+- 'cluster' and 'workers' are mutually exclusive; 'watch' is not allowed with pm2.
+- PM2 must be installed globally by the user; do not install it. Windows Service, Docker, and systemd are out of scope.
+- Tell the user the assistant does not run the script, then summarise location, files, and how to start and stop.`,
       inputSchema: {
         cwd: z
           .string()

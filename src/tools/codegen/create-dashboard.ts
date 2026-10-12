@@ -34,36 +34,26 @@ export function registerCodegenCreateDashboard(server: McpServer): void {
     'codegen_create_dashboard',
     {
       title: 'Create Dashboard Module',
-      description: `Generate a multi-widget dashboard endpoint module from a dashboard payload (a 'widgets' array of SQL aggregations, no table, no CRUD actions) by wrapping restforge dashboard. URL pattern produced: POST /api/{project}/{name}/dashboard.
+      description: `Generate a multi-widget dashboard endpoint from a dashboard payload (a 'widgets' array of SQL aggregations, no table, no CRUD actions), by running npx restforge dashboard. URL: POST /api/{project}/{name}/dashboard.
 
-DESTRUCTIVE: with the default force=true an existing dashboard module is overwritten (the CLI first copies the previous module to '.restforge/archive/<run>/') and the project is re-registered under this call's 'database' value. There is no preview; check the payload with 'codegen_validate_dashboard_payload' first. Confirm intent with the user BEFORE calling, e.g. "Saya akan generate dashboard <name> di project <project>. Versi lama, bila ada, diarsipkan ke .restforge/archive. Lanjut?".
+DESTRUCTIVE: with the default force=true an existing dashboard module is overwritten (previous module copied to '.restforge/archive/<run>/') and the project is re-registered under this call's 'database'. There is no preview; check the payload with 'codegen_validate_dashboard_payload' first and confirm with the user BEFORE calling.
 
 USE WHEN:
-- The user asks to generate or scaffold a dashboard, multi-widget aggregator, or analytics endpoint ("buatkan dashboard sales di project Y", "generate dashboard inbound")
-- A payload with a 'widgets' array exists and the user wants it runnable, or wants it regenerated after the payload changed
+- The user asks to generate a dashboard or analytics endpoint ("buatkan dashboard sales di project Y")
+- A payload with a 'widgets' array exists and should become runnable, or be regenerated after changes
 
 DO NOT USE FOR:
-- A CRUD endpoint (payload has 'tableName', 'fieldName', 'action') -> 'codegen_create_endpoint'
+- A CRUD endpoint (payload with tableName, fieldName, action) -> 'codegen_create_endpoint'
 - Checking a dashboard payload without writing -> 'codegen_validate_dashboard_payload'
-- Looking up the dashboard payload contract -> 'codegen_get_dashboard_catalog'
-- A processor -> 'codegen_create_processor'; deleting a project -> 'project_delete'
-- Widget presentation (widgetType, layout, color, title, subtitle): frontend concerns, forbidden in the payload
-
-DATABASE TYPE: the CLI uses '--database' when given, otherwise postgres. It does NOT read DB_TYPE from the config (unlike 'codegen_create_endpoint'), so pass the project's real database whenever it is not postgres; the dialect is baked into the generated SQL.
-
-FORCE=FALSE: never prompts. When nothing conflicts it generates normally. When the module file exists the CLI stops with "Dashboard module already exists at '<path>'..." and writes nothing; when the project is registered under a different database type it stops with "Cannot change to '<db>' without --force.". The shared main module 'src/modules/<project>.js' is skipped, not failed, when it exists. Use force=false to find out whether the dashboard exists, or when the registered database type must not change.
-
-FILES: the CLI writes 'src/modules/<project>.js', 'src/modules/<project>/<name>.js', 'metadata/<project>/<name>.json', and updates '.restforge/projects.json'. An overwritten module is first copied to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept), so rollback is always possible.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The 'payload' value is passed verbatim and must carry '.json': the CLI looks for '<cwd>/payload/<payload>' then '<cwd>/<payload>'.
-- The payload must follow the dashboard schema. The CLI's DashboardValidator rejects mixed CRUD shapes, forbidden frontend fields, widgets without 'id', duplicate ids, a widget with both or neither of 'query' and 'queries', and placeholders not declared in 'params'.
-- The dashboard name MUST start with 'dash-' (e.g. dash-sales); the prefix becomes part of the URL.
+- The dashboard payload contract -> 'codegen_get_dashboard_catalog'
+- A processor -> 'codegen_create_processor'
+- Widget presentation (widgetType, layout, color, title): frontend concerns, forbidden in the payload
 
 NOTES:
-- After the run, surface the endpoint URL (POST /api/<project>/<name>/dashboard) and any archive activity ('.restforge/archive/<run>/').
-- Dashboard vs CRUD: a dashboard aggregates several SQL queries into a JSON envelope keyed by widget id; a CRUD endpoint exposes /datatables, /read, /create, /update, /delete on one table.`,
+- The CLI does NOT read DB_TYPE from the config: pass 'database' whenever the project is not postgres, because the dialect is baked into the SQL.
+- The name must start with 'dash-' (e.g. dash-sales). 'payload' must include .json.
+- force=false never prompts: an existing module or a different registered database type stops the run and nothing is written.
+- After the run, report the endpoint URL and any archive activity.`,
       inputSchema: {
         cwd: z
           .string()

@@ -149,58 +149,23 @@ export function registerRuntimeGenerateConsumerLauncher(server: McpServer): void
     'runtime_generate_consumer_launcher',
     {
       title: 'Generate RESTForge Kafka Consumer Launcher',
-      description: `Prepare a way to run the Kafka consumer runtime ('restforge-consumer') of a project. This tool does NOT run the consumer — it only writes files that the user executes themselves. Same two-step pattern as 'runtime_generate_launcher': this server prepares, the user runs. A consumer spawned from an AI session would die with the session; a script or PM2 process owned by the user's terminal survives it.
+      description: `Write the files that run the Kafka consumer runtime (restforge-consumer) of a project. This tool does NOT run the consumer; the user executes the files, so the consumer outlives the AI session.
 
 USE WHEN:
-- The user asks to run/start a Kafka consumer, e.g. "jalankan consumer", "run the kafka consumer", "deploy consumer ke pm2"
-- Right after a consumer was generated with 'codegen_create_kafka_consumer' and the user asks how to run it
-- The user wants a production PM2 deployment for the consumers of a project
+- The user asks to run or start a Kafka consumer ("jalankan consumer", "deploy consumer ke pm2")
+- A consumer was just generated with 'codegen_create_kafka_consumer' and the user asks how to run it
 
 DO NOT USE FOR:
-- Starting/stopping the consumer itself -> the user runs the generated script or 'pm2 start' themselves
-- The REST API server -> use 'runtime_generate_launcher' (different binary, different files)
-- Creating the consumer source code -> use 'codegen_create_kafka_consumer'
-
-MODES:
-- mode=host: writes a start/stop pair in the project root (file names are FIXED):
-  * windows: consumer-start.bat, consumer-stop.bat
-  * linux:   consumer-start.sh, consumer-stop.sh
-  The start script runs 'npx restforge-consumer --project=<p> --config=<c> [--consumer=<name>] [--port=<n>]'
-  in the foreground ('exec' on Linux). The stop script kills whatever listens on the
-  consumer control-API port (netstat/taskkill on Windows, lsof/fuser + kill on Linux) —
-  no PID file needed.
-- mode=pm2: does NOT hand-write an ecosystem file. It runs
-  'npx restforge-consumer-deploy' in the project folder, which is the command whose only
-  job is to WRITE deploy files (it never starts a consumer). It produces, in the output
-  folder (default ./deploy/): ecosystem.config.js (one PM2 app per consumer, ports
-  auto-incremented from the base port) and consumer-manager.sh (interactive PM2 helper).
-  It also creates ./logs/pm2/ in the project folder. 'os' is ignored in this mode — the
-  files produced are the same on every platform.
-
-REQUIRED FLAGS AND ARGUMENT FORM:
-- 'config' is REQUIRED for both modes. 'restforge-consumer' refuses to start without it
-  ("Error: --config=<FILE.env> is required", exit 1), and so does 'restforge-consumer-deploy'.
-  The value must end with .env or the consumer rejects it.
-- Both binaries parse only the '--flag=value' form; the space-separated form is silently
-  ignored. The generated script therefore always uses '='.
-- '--license' / '--license-server' are deliberately NOT exposed: the license is read from
-  the environment/config, same choice as 'runtime_generate_launcher'.
-
-Preconditions:
-- The cwd must exist.
-- 'config' must end with .env.
-- mode=pm2 additionally requires @restforgejs/platform installed in the project
-  (node_modules), because the binary enforces a local install.
-- Without 'overwrite': in host mode existing launcher files are skipped, and in pm2 mode
-  the tool refuses to run the CLI at all when deploy files already exist (the CLI would
-  otherwise stop at an interactive overwrite prompt that this server cannot answer).
-  'overwrite' maps to '--force' in pm2 mode only.
+- Starting or stopping the consumer -> the user runs the script or PM2
+- The REST API server -> 'runtime_generate_launcher'
+- Consumer source code -> 'codegen_create_kafka_consumer'
 
 NOTES:
-- Say plainly that this assistant does NOT start the consumer — the user runs it, so it
-  keeps running after this session ends.
-- Remind the user that a Kafka broker must be reachable; the consumer exits otherwise.
-- For pm2 mode: PM2 must be installed globally first (npm install -g pm2). Do not auto-install.`,
+- mode=host writes consumer-start and consumer-stop (.bat on Windows, .sh on Linux) in the project root. The start script runs npx restforge-consumer in the foreground; the stop script kills the process on the control-API port.
+- mode=pm2 runs npx restforge-consumer-deploy, which writes deploy/ecosystem.config.js (one PM2 app per consumer) and deploy/consumer-manager.sh, and creates logs/pm2/. 'os' is ignored in this mode. PM2 must be installed globally by the user; do not install it.
+- 'config' is required and must end with .env.
+- Without overwrite, host mode skips existing files and pm2 mode refuses to run when deploy files exist.
+- Tell the user plainly that the assistant does not start the consumer, and that a reachable Kafka broker is required.`,
       inputSchema: {
         cwd: z
           .string()

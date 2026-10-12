@@ -9,54 +9,24 @@ export function registerCodegenMigratePayload(server: McpServer): void {
     'codegen_migrate_payload',
     {
       title: 'Migrate Payload (RDF backend -> UDF frontend)',
-      description: `Convert an existing backend payload file (RDF) into a frontend payload (UDF) for RESTForge Designer, by wrapping restforge payload migrate. The output is always a SPLIT multi-file set written into an output directory (app-config.json, one file per page under pages/, and an aggregator <appCode>.json), not a single UDF file. The migrator also auto-discovers JOINed tables, so one JOINed RDF can produce several pages at once.
+      description: `Convert an existing backend RDF payload into a frontend UDF for RESTForge Designer, by running npx restforge payload migrate. Output is a split set in the output directory (default frontend/payload/): app-config.json, pages/<pageId>.json, and the aggregator <appCode>.json. JOINed tables are discovered, so one RDF can produce several pages. This is the primary way to create a UDF: start here whenever an RDF exists; hand-author a UDF only when there is no RDF.
 
-DESTRUCTIVE only with overwrite=true: existing pages are recreated from the RDF and their customizations are discarded (the old files are archived). Confirm with the user before using it; re-running without overwrite merges pages.
+DESTRUCTIVE only with overwrite=true: existing pages are recreated from the RDF and their customizations are discarded (old files archived). Confirm with the user first; a normal re-run never needs it.
 
 USE WHEN:
-- The user wants to CREATE or start a frontend UDF and a backend RDF payload exists — this is the default on-ramp, before any hand-authoring
-- The user wants to build a frontend UDF from an existing backend payload, e.g. "buat UDF dari payload backend", "konversi RDF ke UDF", "migrate payload ke frontend", "bikin payload designer dari backend existing"
-- The user has a working backend payload and now wants to start authoring the matching frontend in RESTForge Designer (on-ramp from backend to frontend)
-- The user mentions migrating, converting, or porting a backend payload over to the designer / frontend side
+- The user wants a frontend UDF or designer payload and a backend RDF exists ("buat UDF dari payload backend", "migrate payload ke frontend")
+- Adding another table/page to an existing frontend app (run once per RDF with the same output and project)
+- Bringing RDF changes into existing pages
 
 DO NOT USE FOR:
-- Generating the actual frontend web application from a UDF that already exists -> use the designer generate action (describe it by what it does, do not name the tool)
-- Validating a backend payload against the database schema -> use 'codegen_validate_payload'
-- Generating a backend payload from a database table that has no payload yet -> use 'codegen_generate_payload'
-
-PRIMARY PATH TO CREATE A UDF (firm): this is the FIRST and preferred way to produce a UDF. RESTForge is backend-first — a UDF is normally DERIVED from an existing backend RDF via this tool, not written by hand. Whenever a backend RDF payload exists and the user wants a UDF/frontend, START HERE. Only hand-author a UDF from scratch (grounded by 'designer_get_udf_catalog') when there is genuinely no RDF to migrate from.
-
-This tool runs: npx restforge payload migrate --name=<name> --project=<project> [--output] [--config] [--app-name] [--app-code] [--plugin] [--port] [--overwrite] in the given cwd.
-The CLI reads the backend RDF (resolved relative to cwd or cwd/payload/), reads SERVER_ADDRESS/SERVER_PORT from the DB config (or the default config) to build apiBaseUrl, and writes the split UDF files into the output directory (default frontend/payload/).
-
-Cross-reference (downstream UDF flow):
-- This tool is the on-ramp that creates a UDF from an existing backend RDF. Its split UDF output is consumed by the designer tools: validate it with 'designer_validate_payload', dry-run it with 'designer_preview_files', and generate the frontend with 'designer_generate' — always point those at the aggregator file (<appCode>.json), not the individual page fragments.
-- To see the target UDF structure and rules (valid field types, required appConfig fields, enums, limits), use 'designer_get_udf_catalog'.
-- Canonical UDF flow: codegen_migrate_payload -> designer_get_udf_catalog -> designer_validate_payload -> designer_preview_files -> designer_generate.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The named RDF payload file must exist (resolved relative to cwd or cwd/payload/).
-- Without --overwrite, the command fails if app-config.json exists without its aggregator, or if an existing page file cannot be parsed.
-  This tool does not pre-check those — if the CLI fails, the failure response will surface the cause.
-
-Adding tables to an existing app (multi-page):
-- Run this tool once per RDF with the same output directory and project. The app counts as existing when app-config.json and the aggregator <appCode>.json are already in the output directory.
-- For an existing app, overwrite is NOT needed to add a new table, even when the new table JOINs a table whose page already exists.
-- The aggregator is merged: the new page's include and navigation item are added without duplicates, and existing homepage, labels, and icons are kept.
-- app-config.json is merged: existing appConfig values are kept and missing properties are added. Exception: dateFormat and dateTimeFormat are always rewritten from DATEFORMAT/DATETIMEFORMAT in the backend config, so frontend date patterns stay identical to the backend.
-- These aggregator and app-config.json merge rules apply with or without overwrite.
-
-Re-migrating a page that already exists (customization is kept):
-- Without overwrite, an existing page file under pages/ is merged, not replaced. Values the user changed in the page (titles, labels, placeholders, widths, layout, removed fields, fieldRows, and other blocks) are kept, and RDF changes to values the user did not touch are applied. New RDF columns are added to fields and, when the page uses fieldRows, as a new row.
-- The merge uses a snapshot of the last generated page stored under <output>/.meta/pages/<pageId>.json. The snapshot is managed by the CLI and should be committed together with the page files; do not edit it.
-- When the user and the RDF both changed a backend contract property (apiPath, primaryKey, type, required, maxlength, decimalPlaces, tableField, dataSource type/resource, option values), the RDF value is used and a warning is printed. Actions disabled in the RDF and temporalType always follow the RDF.
-- A page created before snapshots existed keeps its differing values but does not receive new fields; the CLI prints a warning listing them, and the next run uses the full merge.
-- Overwrite recreates the page from scratch, discarding customization; the previous file is archived under .restforge/archive/.
-- If app-config.json in the output directory belongs to a different appCode, the command stops before writing any file.
+- Generating the frontend application from a UDF -> 'designer_generate'
+- Validating an RDF against the database -> 'codegen_validate_payload'
+- A table with no RDF yet -> 'codegen_generate_payload'
 
 NOTES:
-- After a successful migration, the usual next steps are to validate the resulting UDF, preview it, or generate the frontend application from it. Describe those steps by what they do; do not name internal tools.`,
+- Without overwrite, existing pages, the aggregator, and app-config.json are merged: user edits are kept and RDF changes are applied, using snapshots in <output>/.meta/pages/ (commit them, never edit them). dateFormat and dateTimeFormat always follow the backend config.
+- The command stops before writing when app-config.json belongs to a different appCode.
+- Next steps: validate the aggregator, preview, then generate. Point designer tools at <appCode>.json, not at page files.`,
       inputSchema: {
         cwd: z
           .string()

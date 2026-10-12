@@ -9,34 +9,28 @@ export function registerCodegenDbschemaMigrate(server: McpServer): void {
     'codegen_dbschema_migrate',
     {
       title: 'Migrate dbschema-kit Files to Database',
-      description: `Apply dbschema-kit definition files to a live database (load -> validate -> generate DDL -> apply via dialect driver), by wrapping restforge schema migrate. Intended for an empty database or a deliberate drop-and-recreate.
+      description: `Apply SDF files to a live database (load, validate, generate DDL, apply), by running npx restforge schema migrate. Intended for an empty database or a deliberate drop-and-recreate.
 
-DESTRUCTIVE: MUTATES a live database and has no rollback; DDL already executed stays applied. ALWAYS confirm with the user before dryRun=false; the safe first call is dryRun=true. With drop=true ALL DATA in the affected tables is destroyed: confirm explicitly and name the tables. When the config points to production, recommend dry-run plus manual review first. For an existing database with data, prefer 'codegen_dbschema_diff' then 'codegen_dbschema_apply'.
+DESTRUCTIVE: MUTATES a live database without rollback; DDL already executed stays applied. ALWAYS confirm with the user before dryRun=false; the safe first call is dryRun=true. With drop=true ALL DATA in the affected tables is destroyed: confirm explicitly and name the tables. For a production config, recommend dry-run and manual review first. For an existing database with data, prefer 'codegen_dbschema_diff' then 'codegen_dbschema_apply'.
 
 USE WHEN:
-- The user asks to apply the schema to a database ("migrate schema ke DB", "create tables di postgres", "apply DDL ke MySQL")
+- The user asks to apply the schema to a database ("migrate schema ke DB", "create tables di postgres")
 - Initial database setup, after 'codegen_dbschema_validate' passed and the user confirmed
-- A DDL preview against the target database -> dryRun=true (safe path)
-- A deliberate drop-and-recreate -> drop=true, only with explicit user confirmation
+- A DDL preview against the target database (dryRun=true)
+- A deliberate drop-and-recreate (drop=true, explicit confirmation only)
 
 DO NOT USE FOR:
-- Changing tables that already exist (add columns, indexes, FKs) -> 'codegen_dbschema_diff' then 'codegen_dbschema_apply'
-- Generating DDL without applying -> 'codegen_dbschema_generate_ddl'
-- Validating schema correctness -> 'codegen_dbschema_validate'
+- Changing existing tables (add columns, indexes, FKs) -> 'codegen_dbschema_diff' then 'codegen_dbschema_apply'
+- DDL without applying -> 'codegen_dbschema_generate_ddl'
+- Validating schema files -> 'codegen_dbschema_validate'
 - Listing live tables -> 'codegen_list_tables'
 - A production database without explicit user authorisation
 
-This tool runs: npx restforge schema migrate --schema-path=<path> --config=<file> [--drop=<bool>] [--dry-run] [--max-name-length=<N>] [--auto-create-db] in the given cwd.
-The CLI auto-detects the dialect from the config file (DB_TYPE=postgresql|mysql|oracle|sqlite). The CLI exits 0 on success for BOTH a real apply and a dry-run preview (the legacy exit code 2 for dry-run has been removed); any non-zero exit is an error. This tool distinguishes a dry-run preview from a real apply by the dryRun parameter, not by the exit code.
-Tables declared with softDelete enabled emit the same soft-delete DDL as generate-ddl: a consistency CHECK named chk_<table>_soft_delete_consistency and PostgreSQL partial indexes (WHERE is_deleted = FALSE) for non-unique indexes. Soft-delete is PostgreSQL-only in Phase 1 — migrating such a schema against any other dialect fails with a clear error.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist and contain valid database credentials.
-- Schema files must exist at the given path and pass validation. The --schema-path flag is required by the CLI.
-
 NOTES:
-- The user must specify --schema-path (e.g. './schema'). The CLI no longer accepts a positional argument or default. If the user does not mention a path, confirm it before invoking.`,
+- 'schemaPath' is required; confirm it when the user did not mention one.
+- The dialect comes from DB_TYPE in the config. Exit 0 means success for both a real run and a dry run.
+- autoCreateDb creates a missing database, then stops with exit 0; call the tool again to apply the tables.
+- softDelete tables get the CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes; soft-delete fails on other dialects.`,
       inputSchema: {
         cwd: z
           .string()

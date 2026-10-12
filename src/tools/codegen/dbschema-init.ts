@@ -9,36 +9,22 @@ export function registerCodegenDbschemaInit(server: McpServer): void {
     'codegen_dbschema_init',
     {
       title: 'Init dbschema-kit Skeleton File',
-      description: `Create a DRAFT schema definition file at the given path, by wrapping restforge schema init. The file holds the generic 'dummy' template: a dummy_id primary key, one sample column per field type (field_string, field_text, field_integer, field_bigint, field_decimal, field_boolean, field_date, field_timestamp, field_uuid, field_json), and the audit columns. It contains no domain fields; the user edits it by hand afterwards.
+      description: `Create a DRAFT schema file holding the generic dummy template (dummy_id primary key, one sample column per field type, audit columns), by running npx restforge schema init. It has no domain fields; the user edits it afterwards.
 
 USE ONLY WHEN the user explicitly asks for a draft, initial, or skeleton file:
-- "draft table", "draft schema", "inisial table", "file schema awal", "skeleton schema", "init schema definition", "starter file untuk saya isi sendiri"
+- "draft schema", "inisial table", "file schema awal", "skeleton schema", "starter file untuk saya isi sendiri"
 
 DO NOT USE FOR:
-- A request to create a real table ("buatkan tabel product", "create a customer table", "I need a customer_invoice table") -> this is NOT a draft request. If the fields and types are not stated, ask the user for them first (one short question; the user may leave the design to the assistant). Then ground the syntax with 'codegen_get_dbschema_catalog', write the complete schema/<table>.js with the file tools, and run 'codegen_dbschema_validate'. Never call this tool as a first step before authoring a real table.
-- A ready-made template from the reference collection (sales_order, invoice, product, ...) on explicit request -> use 'codegen_dbschema_template'
-- Editing an existing schema file -> use Edit/Write tools directly
-- Generating schema files from a live database -> use 'codegen_dbschema_introspect'
-- Creating a CRUD payload (different concept) -> use 'codegen_generate_payload'
-- Validating the schema -> use 'codegen_dbschema_validate'
-- Generating DDL -> use 'codegen_dbschema_generate_ddl'
-
-This tool runs: npx restforge schema init --schema-path=<path> in the given cwd.
-The CLI writes a JavaScript factory function file to the target path. The path must end with '.js' and the file must NOT already exist.
-
-There is no overwrite option here: '--schema-path' is the only flag the CLI accepts for this verb, and it has no '--force'. An existing target file is always an error, so this tool never overwrites anything. When the user really wants to replace an existing file, either the old file is removed first, or 'codegen_dbschema_template' is used in generate mode with force enabled — that is the verb that owns the overwrite path.
-
-IMPLEMENTATION NOTE (matters for cross-platform behaviour): schema init is a thin wrapper over 'schema template --table=dummy --generate --lang=sdf'. It therefore depends on the same native binary (sdf-tools.exe) that the template feature uses, and that binary is currently WINDOWS-ONLY. On a non-Windows host (or if the binary is missing from the installed package) the CLI exits with code 3 and no file is created — that is a platform limitation, not a user error.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The init feature requires the Windows-only sdf-tools.exe binary shipped with the package (exit 3 otherwise — see IMPLEMENTATION NOTE).
-- The target file must NOT already exist (CLI fails otherwise — the user can pick a different name or remove the existing file first).
-- The parent folder of the target path must exist (CLI does not create intermediate folders).
+- A request to create a real table ("buatkan tabel product", "I need a customer_invoice table") -> not a draft request. If fields and types are not stated, ask first (the user may leave the design to the assistant), then ground with 'codegen_get_dbschema_catalog', write schema/<table>.js with the file tools, and run 'codegen_dbschema_validate'. Never call this tool as a first step for a real table.
+- A ready-made template on explicit request -> 'codegen_dbschema_template'
+- Editing a schema file -> file tools
+- Schema files from a live database -> 'codegen_dbschema_introspect'
+- An RDF payload -> 'codegen_generate_payload'
 
 NOTES:
-- The draft holds only the generic dummy columns. Tell the user to rename the table and replace the sample columns with the real domain fields.
-- If the user wants multiple files (e.g. category.js, supplier.js, customer.js), invoke this action once per file. Do not assume one call covers multiple files.`,
+- The path must end with .js, the file must not exist, and its parent folder must exist. There is no overwrite option.
+- Needs the Windows-only binary sdf-tools.exe; exit 3 means it is unavailable on this host, not a user error.
+- One call writes one file. Tell the user to rename the table and replace the sample columns.`,
       inputSchema: {
         cwd: z
           .string()

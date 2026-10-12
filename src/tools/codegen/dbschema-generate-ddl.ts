@@ -9,38 +9,24 @@ export function registerCodegenDbschemaGenerateDdl(server: McpServer): void {
     'codegen_dbschema_generate_ddl',
     {
       title: 'Generate DDL from dbschema-kit Files',
-      description: `Generate dialect-specific DDL SQL (CREATE TABLE, CREATE INDEX, optional DROP TABLE) from dbschema-kit definition files in topological order, by wrapping restforge schema generate-ddl. Output goes to stdout (returned in the response) or to a file when 'output' is set. Tables are emitted in topological order so parent tables are created before children; DROP order is reversed.
+      description: `Generate dialect-specific DDL (CREATE TABLE, CREATE INDEX, optional DROP TABLE) from SDF files in topological order, by running npx restforge schema generate-ddl. Output is returned, or written to 'output'.
 
 USE WHEN:
-- The user asks to generate DDL, "buatkan SQL DDL", "generate CREATE TABLE statements"
-- Pertanyaan dalam bentuk: "convert schema ke postgres SQL", "generate DDL untuk MySQL", "buatkan migration script"
-- Before applying schema to a database — for preview/review (safer than running migrate directly)
-- The user wants a portable SQL file for sharing with a DBA or for git versioning
-- The user asks for cross-dialect compatibility ("apakah schema bisa untuk postgres dan mysql")
-- Migration script preparation
-- After validating schema and the user wants to see the SQL output
+- The user asks for DDL ("buatkan SQL DDL", "generate DDL untuk MySQL", "buatkan migration script")
+- Reviewing the SQL before applying it to a database
+- A portable SQL file for a DBA or for version control
+- Checking whether a schema works on several dialects
 
 DO NOT USE FOR:
-- Applying DDL to a live database -> use 'codegen_dbschema_migrate'
-- Generating CRUD payload SQL -> out of scope (different layer)
-- Generating ad-hoc query SQL -> out of scope
-- Generating DDL for tables not defined in schema files -> out of scope (only schema-as-code files are processed)
-- Validating schema correctness -> use 'codegen_dbschema_validate'
-
-This tool runs: npx restforge schema generate-ddl --schema-path=<path> --dialect=<X> [--output=<file>] [--drop=<bool>] in the given cwd.
-
-SOFT-DELETE EMISSION: a table declared with softDelete enabled emits a consistency CHECK constraint named chk_<table>_soft_delete_consistency and emits its non-unique indexes as PostgreSQL partial indexes (WHERE is_deleted = FALSE); UNIQUE constraints are never made partial. Soft-delete is PostgreSQL-only in Phase 1: generating DDL for any other dialect fails with a clear error ("soft-delete is PostgreSQL-only in Phase 1") instead of emitting wrong DDL silently.
-
-Preconditions:
-- The project must have @restforgejs/platform installed in node_modules.
-- The schema path must exist and contain valid schema files. If the CLI fails, the failure response surfaces the underlying cause.
+- Applying DDL to a live database -> 'codegen_dbschema_migrate' (new database) or 'codegen_dbschema_apply' (existing database)
+- Validating schema files -> 'codegen_dbschema_validate'
+- Tables not defined in SDF files, CRUD SQL, or ad-hoc queries -> out of scope
 
 NOTES:
-- Output is dialect-aware: column types, FK syntax, default value translation, and identifier quoting all change per dialect. Do not assume cross-dialect equivalence.
-- The order is topological — parent tables before child tables. DROP order is reversed.
-- For preview before applying, this is the safe path. To actually apply, suggest the migrate action next.
-- When 'output' is set, the file is written; if it exists, it is overwritten. Confirm with the user if a destructive overwrite is intended.
-- If the user wants multi-dialect output, suggest invoking once per dialect.`,
+- Parents are created before children; DROP order is reversed.
+- Types, FK syntax, defaults, and quoting differ per dialect; call once per dialect for multi-dialect output.
+- 'output' overwrites an existing file; confirm when that file exists.
+- softDelete tables emit the CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes for non-unique indexes; other dialects fail with "soft-delete is PostgreSQL-only in Phase 1".`,
       inputSchema: {
         cwd: z
           .string()
