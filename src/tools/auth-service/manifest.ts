@@ -10,14 +10,16 @@ export function registerAuthServiceManifest(server: McpServer): void {
       description: `Write the permission manifest of an application project (resources and actions derived from its endpoints), by running npx restforge auth-service manifest. Writes one JSON file; the database is not touched.
 
 USE WHEN:
-- Permissions of an application must be registered in the auth-service and the manifest file does not exist or is outdated
+- The manifest must be rebuilt by hand, e.g. after the action matrix of an RDF was edited without running endpoint create
 - The user asks "buat manifest permission"
+
+endpoint create already updates config/auth-manifest.json for every endpoint of a linked project, so this tool is not part of the per-table flow.
 
 DO NOT USE FOR:
 - Writing the manifest into the auth database -> 'auth_service_provision'
 - Linking the application to the auth-service -> 'auth_service_link'
 
-Overwrites the output file when it exists.`,
+An existing manifest is merged: description, manual actions such as PRINT, categories, and other keys are kept.`,
       inputSchema: {
         cwd: z.string().min(1).describe(CWD_DESCRIPTION),
         project: z.string().min(1).describe('Application project name. REQUIRED.'),

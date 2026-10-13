@@ -388,6 +388,7 @@ For the assistant:
 - Suggest natural follow-up actions appropriate to context: review the generated files, run the project to test the new endpoint, generate a processor or test, etc. Do not mention internal tool names.
 - Read the CLI output to identify any archive activity. Overwritten files are moved to '.restforge/archive/<run>/<original relative path>' (the 5 most recent runs are kept). When archives are created, tell the user the previous versions are kept there and can be copied back for a rollback.
 - Read the CLI output to identify any audit migration activity (the CLI reports it when the payload uses a fieldPolicy 'audit' strategy). When present, summarise it briefly to the user (e.g. that the audit table for the related table was created or updated).
+- When the CLI output has an 'Auth Service' section (project linked to auth-service), summarise it: authGuard added to the payload, the permission manifest created or updated, and any warning. When it suggests provisioning, tell the user permissions for the new resource are registered after running provision, and that an owner user can already use the endpoint before that.
 - Match the user's language.`,
           },
         ],

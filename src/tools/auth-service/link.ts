@@ -17,7 +17,7 @@ DO NOT USE FOR:
 - Creating the auth-service itself -> 'auth_service_init'
 - Registering permissions in the auth database -> 'auth_service_manifest' then 'auth_service_provision'
 
-The application endpoints must already exist: endpoint create has to run before link, and again after link so that authGuard takes effect on the generated endpoints.`,
+Run link right after bootstrap, before the first endpoint exists. Once AUTH_APP_CODE is in the application env, payload generate adds authGuard to new RDF files and endpoint create adds the resource to config/auth-manifest.json, so new tables need no further auth-service step except provision. When link updates RDF files of existing endpoints, run endpoint create again for those endpoints. An authGuard with enabled false is kept disabled.`,
       inputSchema: {
         cwd: z.string().min(1).describe(CWD_DESCRIPTION),
         project: z.string().min(1).describe('Application project name. REQUIRED.'),
@@ -48,7 +48,7 @@ The application endpoints must already exist: endpoint create has to run before 
         args,
         action: 'link application to auth-service',
         successNote:
-          'Summarise what was changed in the application. Remind that endpoint create must be run again so authGuard applies to the endpoints.',
+          'Summarise what was changed in the application. When the project has no endpoint yet, say that new tables get authGuard automatically from payload generate and endpoint create. When RDF files of existing endpoints were updated, remind that endpoint create must be run again for them.',
         failureNote:
           'Tell the user the link did not complete; summarise the likely cause (e.g. project not found, env file missing, invalid app code).',
       });
