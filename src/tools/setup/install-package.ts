@@ -9,7 +9,7 @@ export function registerSetupInstallPackage(server: McpServer): void {
     'setup_install_package',
     {
       title: 'Install @restforgejs/platform Package',
-      description: `Install the @restforgejs/platform package locally into the project's node_modules, by running npm install @restforgejs/platform@<version>. Default version is 'beta' (public pre-release); 'latest' or an exact version also work.
+      description: `Install the @restforgejs/platform package locally into the project's node_modules, by running npm install @restforgejs/platform@<version>. Default version is 'latest'; 'beta' or an exact version also work.
 
 USE WHEN:
 - The project folder exists but @restforgejs/platform is not installed yet (granular setup: after 'setup_create_folder', before 'setup_init_config')
@@ -33,8 +33,8 @@ NOTES:
           .describe('Absolute path of the project folder (must exist before this tool runs)'),
         version: z
           .string()
-          .default('beta')
-          .describe('npm version or tag: "beta" (default), "latest", or a specific version (e.g. "1.2.3")'),
+          .default('latest')
+          .describe('npm version or tag: "latest" (default), "beta" for a pre-release, or a specific version (e.g. "1.2.3")'),
       },
       annotations: {
         title: 'Install @restforgejs/platform',
