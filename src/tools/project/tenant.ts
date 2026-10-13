@@ -25,7 +25,8 @@ DO NOT USE FOR:
 
 NOTES:
 - Activate writes TENANT_MODE=multi to the config; deactivate writes TENANT_MODE=single.
-- The running server must be restarted by the user afterwards.`,
+- The running server must be restarted by the user afterwards.
+- Tables added later get tenant scope from 'codegen_dbschema_migrate' and 'codegen_generate_payload'. Run activate again only for a table already in the database without tenant_id.`,
       inputSchema: {
         cwd: z
           .string()

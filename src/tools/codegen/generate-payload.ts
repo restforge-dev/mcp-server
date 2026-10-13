@@ -28,7 +28,8 @@ NOTES:
 - 'schemaPath' is required when the table has soft-delete columns (is_deleted, deleted_at, deleted_by): the softDelete block comes from the SDF, and the CLI fails without it. The SDF also supplies CHECK constraints for fieldValidation and checkConstraints; without an SDF that step is skipped.
 - 'detail' adds a masterDetail block, a detail query file, and composite actions. The detail table needs an FK to the master primary key. An existing masterDetail block is kept.
 - 'output' other than payload/ means the file must be moved back before 'codegen_create_endpoint'.
-- JOIN columns are never generated here; use 'codegen_sync_payload' with expandFk.`,
+- JOIN columns are never generated here; use 'codegen_sync_payload' with expandFk.
+- With TENANT_MODE=multi, a table with a tenant_id column gets requestScope when the RDF has none, so 'codegen_create_endpoint' accepts it.`,
       inputSchema: {
         cwd: z
           .string()

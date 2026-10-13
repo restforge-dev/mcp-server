@@ -30,7 +30,8 @@ NOTES:
 - 'schemaPath' is required; confirm it when the user did not mention one.
 - The dialect comes from DB_TYPE in the config. Exit 0 means success for both a real run and a dry run.
 - autoCreateDb creates a missing database, then stops with exit 0; call the tool again to apply the tables.
-- softDelete tables get the CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes; soft-delete fails on other dialects.`,
+- softDelete tables get the CHECK chk_<table>_soft_delete_consistency and PostgreSQL partial indexes; soft-delete fails on other dialects.
+- With TENANT_MODE=multi, the SDF of a new table without tenant_id is rewritten (tenant_id, per-tenant uniques, old file archived) before the table is created.`,
       inputSchema: {
         cwd: z
           .string()
