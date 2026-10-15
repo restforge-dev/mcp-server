@@ -82,7 +82,12 @@ NOTES:
         database: z
           .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
-          .describe("Database type. Accepted values match the CLI's own list for this command: postgres, oracle, mysql, sqlite. Optional, and when it is left unset this tool sends '--database=postgres' explicitly, which is also the CLI's own default. The database connection is NOT used in validate-only mode (validation is structural, not drift-based) and the dialect does not change the validation outcome; the parameter is kept for argument-schema parity with codegen_create_dashboard."),
+          .describe("Database type. Leave it unset unless the user named one: when unset, no --database flag is sent and the CLI resolves the type from DB_TYPE of the active config (the one given via 'config', or the recorded default), else postgres. The database connection is NOT used in validate-only mode (validation is structural, not drift-based) and the dialect does not change the validation outcome, except that sqlite (explicit or auto-detected) is rejected because dashboards do not support it; the parameter is kept for argument-schema parity with codegen_create_dashboard."),
+        config: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Optional database config file (.env) whose DB_TYPE sets the dialect when 'database' is unset, e.g. 'config/db-connection.env'. Resolved relative to the project folder. When omitted, the CLI falls back to the config recorded as default; a config path that does not exist makes the CLI stop with 'Config file not found'."),
         skipSqlValidation: z
           .boolean()
           .optional()
@@ -94,9 +99,16 @@ NOTES:
         idempotentHint: true,  // re-running gives same result for same input
       },
     },
-    async ({ cwd, project, name, payload, database, skipSqlValidation }) => {
+    async ({ cwd, project, name, payload, database, config, skipSqlValidation }) => {
       const projectCwd = resolve(cwd);
-      const dbType = database ?? 'postgres';
+      // Database-type resolution belongs to the CLI (generators/cli/dashboard/create.js,
+      // "Resolusi tipe database", issue-54): an explicit --database wins, otherwise DB_TYPE
+      // is auto-detected from the active config, otherwise it falls back to 'postgres'.
+      // The flag is therefore sent only when the caller actually set the parameter;
+      // sending it unconditionally would disable the auto-detection step. This label is
+      // for reporting only.
+      const dbType =
+        database ?? 'not specified (resolved by the CLI: DB_TYPE of the active config, else postgres)';
 
       // Pre-flight 1: @restforgejs/platform must be installed. Treated as a non-error precondition per §3.4.
       try {
@@ -173,9 +185,10 @@ For the assistant:
         `--project=${project}`,
         `--name=${name}`,
         `--payload=${payload}`,
-        `--database=${dbType}`,
         '--validate-only=true',
       ];
+      if (database !== undefined) cliArgs.push(`--database=${database}`);
+      if (config !== undefined) cliArgs.push(`--config=${config}`);
       if (skipSqlValidation !== undefined) cliArgs.push(`--skip-sql-validation=${skipSqlValidation}`);
 
       const result = await execProcess(

@@ -36,7 +36,7 @@ export function registerCodegenCreateDashboard(server: McpServer): void {
       title: 'Create Dashboard Module',
       description: `Generate a multi-widget dashboard endpoint from a dashboard payload (a 'widgets' array of SQL aggregations, no table, no CRUD actions), by running npx restforge dashboard. URL: POST /api/{project}/{name}/dashboard.
 
-DESTRUCTIVE: with the default force=true an existing dashboard module is overwritten (previous module copied to '.restforge/archive/<run>/') and the project is re-registered under this call's 'database'. There is no preview; check the payload with 'codegen_validate_dashboard_payload' first and confirm with the user BEFORE calling.
+DESTRUCTIVE: with the default force=true an existing dashboard module is overwritten (previous module copied to '.restforge/archive/<run>/') and the project is re-registered under the resolved database type. There is no preview; check the payload with 'codegen_validate_dashboard_payload' first and confirm with the user BEFORE calling.
 
 USE WHEN:
 - The user asks to generate a dashboard or analytics endpoint ("buatkan dashboard sales di project Y")
@@ -50,7 +50,7 @@ DO NOT USE FOR:
 - Widget presentation (widgetType, layout, color, title): frontend concerns, forbidden in the payload
 
 NOTES:
-- The CLI does NOT read DB_TYPE from the config: pass 'database' whenever the project is not postgres, because the dialect is baked into the SQL.
+- Leave 'database' unset unless the user named one: the CLI reads DB_TYPE from the config, and a guessed value overrides it.
 - The name must start with 'dash-' (e.g. dash-sales). 'payload' must include .json.
 - force=false never prompts: an existing module or a different registered database type stops the run and nothing is written.
 - After the run, report the endpoint URL and any archive activity.`,
@@ -84,7 +84,12 @@ NOTES:
         database: z
           .enum(['postgres', 'oracle', 'mysql', 'sqlite'])
           .optional()
-          .describe("Database type for the generated code. Accepted values match the CLI's own list for this command: postgres, oracle, mysql, sqlite. Optional, and when it is left unset this tool sends '--database=postgres' explicitly, which is also the CLI's own default for 'dashboard create'. NOTE — unlike 'codegen_create_endpoint', the dashboard CLI handler does NOT auto-detect DB_TYPE from the active config: it only applies a plain postgres default. So for any project that is not postgres, set this parameter explicitly, otherwise the generated dashboard module targets the wrong dialect."),
+          .describe("Database type for the generated code. LEAVE IT UNSET unless the user explicitly names a database: when unset, no --database flag is sent and the CLI resolves the type itself, in this order — (1) explicit value (this parameter), (2) auto-detection of DB_TYPE from the active config (the one given via 'config', or the recorded default config), (3) fallback 'postgres' when no config can be resolved. Setting this parameter always wins over the project's own config, and the dialect is baked into the generated SQL. Dashboards do not support sqlite: the CLI rejects it, explicit or auto-detected, before writing anything."),
+        config: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Optional database config file (.env) whose DB_TYPE sets the dialect when 'database' is unset, e.g. 'config/db-connection.env'. Resolved relative to the project folder. When omitted, the CLI falls back to the config recorded as default; a config path that does not exist makes the CLI stop with 'Config file not found'."),
         skipSqlValidation: z
           .boolean()
           .optional()
@@ -92,7 +97,7 @@ NOTES:
         force: z
           .boolean()
           .default(true)
-          .describe("Default true — the existing behaviour: overwrite an existing dashboard module (the CLI first copies the previous module to .restforge/archive/<run>/) and re-register the project under the 'database' value of this call. Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but an existing dashboard module or a different registered database type makes the CLI stop with a clean error and write nothing. The dashboard command has no interactive prompt, so force=false never hangs the call."),
+          .describe("Default true — the existing behaviour: overwrite an existing dashboard module (the CLI first copies the previous module to .restforge/archive/<run>/) and re-register the project under the resolved database type. Set to false for the non-overwrite path: generation still proceeds when nothing conflicts, but an existing dashboard module or a different registered database type makes the CLI stop with a clean error and write nothing. The dashboard command has no interactive prompt, so force=false never hangs the call."),
       },
       annotations: {
         title: 'Create Dashboard Module',
@@ -101,9 +106,16 @@ NOTES:
         idempotentHint: false,  // re-running creates new archive files
       },
     },
-    async ({ cwd, project, name, payload, database, skipSqlValidation, force }) => {
+    async ({ cwd, project, name, payload, database, config, skipSqlValidation, force }) => {
       const projectCwd = resolve(cwd);
-      const dbType = database ?? 'postgres';
+      // Database-type resolution belongs to the CLI (generators/cli/dashboard/create.js,
+      // "Resolusi tipe database", issue-54): an explicit --database wins, otherwise DB_TYPE
+      // is auto-detected from the active config, otherwise it falls back to 'postgres'.
+      // The flag is therefore sent only when the caller actually set the parameter;
+      // sending it unconditionally would disable the auto-detection step. This label is
+      // for reporting only.
+      const dbType =
+        database ?? 'not specified (resolved by the CLI: DB_TYPE of the active config, else postgres)';
 
       // Pre-flight 1: @restforgejs/platform must be installed. Treated as a non-error precondition per §3.4.
       try {
@@ -182,8 +194,9 @@ For the assistant:
         `--project=${project}`,
         `--name=${name}`,
         `--payload=${payload}`,
-        `--database=${dbType}`,
       ];
+      if (database !== undefined) cliArgs.push(`--database=${database}`);
+      if (config !== undefined) cliArgs.push(`--config=${config}`);
       if (force) cliArgs.push('--force=true');
       if (skipSqlValidation !== undefined) cliArgs.push(`--skip-sql-validation=${skipSqlValidation}`);
 
@@ -234,6 +247,8 @@ For the assistant:
   * Widget SQL uses an undeclared placeholder (e.g. ':year' but 'year' missing from 'params') — suggest declaring the missing param or removing the placeholder.
   * Database mismatch with the existing project registry entry — the CLI refuses to switch the database. Suggest sticking with the originally registered database.
   * Reserved project name rejected by the validator — suggest a different project name.
+  * 'Config file not found' — the config path does not exist; check the file name under the project's config/ folder.
+  * 'Dashboard does not support database' — dashboards support postgres, mysql and oracle only; a SQLite project cannot host a dashboard module.
   * 'Payload file not found' — the CLI resolves the payload argument verbatim; check that the name includes the '.json' extension and that the file sits in the payload/ folder.
 ${force
   ? "- The call ran with the default force=true, so an overwrite was allowed; a conflict message is therefore not the cause here."
@@ -274,6 +289,7 @@ ${result.stdout}
 
 For the assistant:
 - Confirm to the user in plain language that the dashboard endpoint was generated. Mention the project, dashboard name, and the resulting URL: POST /api/${project}/${name}/dashboard.
+- Mention the database type only when it is known: either it was passed explicitly, or the CLI output shows it on its 'Database' line (annotated with '(auto-detected ...)' when it came from a config). When the fact block above says it was not specified, read it from the CLI output instead of guessing.
 - Do not paste the entire CLI output unless the user explicitly asks; summarise instead.
 - Read the CLI output to identify any archive activity (the previous module is copied to '.restforge/archive/<run>/<original relative path>'; the 5 most recent runs are kept). When archives are created, tell the user that the previous version of the dashboard module is preserved in case rollback is needed.
 - Suggest natural follow-up actions appropriate to context: review the generated module, run the project to test the new dashboard endpoint, draft a frontend caller, etc. Do not mention internal tool names.
