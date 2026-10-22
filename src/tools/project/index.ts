@@ -4,6 +4,7 @@ import { registerProjectDelete } from './delete.js';
 import { registerProjectAuth } from './auth.js';
 import { registerProjectSdkGenerate } from './sdk-generate.js';
 import { registerProjectTenant } from './tenant.js';
+import { registerProjectVerify } from './verify.js';
 
 export function registerProjectTools(server: McpServer): void {
   registerProjectList(server);
@@ -11,4 +12,5 @@ export function registerProjectTools(server: McpServer): void {
   registerProjectAuth(server);
   registerProjectSdkGenerate(server);
   registerProjectTenant(server);
+  registerProjectVerify(server);
 }
