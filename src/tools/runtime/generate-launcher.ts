@@ -114,6 +114,8 @@ module.exports = {
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,
+      // Configuration errors at startup exit with code 78; PM2 does not restart them.
+      stop_exit_codes: [78],
       watch: false,
       kill_timeout: 5000,
 
