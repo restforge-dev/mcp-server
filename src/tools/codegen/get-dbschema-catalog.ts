@@ -15,6 +15,7 @@ USE WHEN:
 - Before writing or editing schema/<table>.js, once the fields are settled: request only the sections the file needs (e.g. fieldTypes, shorthandSyntax, auditColumns, relationTypes), once per session
 - The user asks about SDF syntax: defineModel, shorthand such as 'string:36 pk' or 'decimal:15,2 default:0', relations, unique, checks, onDelete ("field type apa saja")
 - Audit columns or soft-delete in the schema layer (section=softDelete)
+- Transaction document lock block in the schema layer (section=document)
 - Which dialects are supported
 
 DO NOT USE FOR:
@@ -41,6 +42,7 @@ NOTES:
             'checkOperations',
             'auditColumns',
             'softDelete',
+            'document',
             'shorthandSyntax',
             'namingRules',
             'dialectSupport',
@@ -51,7 +53,7 @@ NOTES:
           .string()
           .min(1)
           .optional()
-          .describe('Filter array sections by exact name (e.g. "string", "belongsTo", "cascade"). Only valid together with one of: section=defineModelOptions, fieldTypes, constraints, relationTypes, referentialActions, checkOperations, dialectSupport. The CLI rejects it for the other sections (auditColumns, softDelete, shorthandSyntax, namingRules).'),
+          .describe('Filter array sections by exact name (e.g. "string", "belongsTo", "cascade"). Only valid together with one of: section=defineModelOptions, fieldTypes, constraints, relationTypes, referentialActions, checkOperations, dialectSupport. The CLI rejects it for the other sections (auditColumns, softDelete, document, shorthandSyntax, namingRules).'),
         kind: z
           .enum(['standalone', 'value'])
           .optional()
