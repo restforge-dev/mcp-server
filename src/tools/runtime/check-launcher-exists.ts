@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { getLauncherFileNames, launcherNameSchema } from './launcher-files.js';
 
-function getLauncherFiles(os: 'windows' | 'linux', mode: 'host' | 'pm2', name: string): string[] {
-  const names = getLauncherFileNames(os, name);
-  const files: string[] = [names.start, names.stop];
-  if (mode === 'pm2') {
-    files.push(names.ecosystem);
+// Nama file mengikuti renderLauncherFiles di generators/lib/launcher/launcher-writer.js
+// platform. CLI belum punya output yang menyebut nama file tanpa menulisnya.
+function getLauncherFiles(runner: 'terminal' | 'pm2', os: 'windows' | 'linux' | 'both'): string[] {
+  const exts = os === 'both' ? ['bat', 'sh'] : [os === 'windows' ? 'bat' : 'sh'];
+  const files = exts.map((ext) => `launch-${runner}.${ext}`);
+  if (runner === 'pm2') {
+    files.push('ecosystem.config.js');
   }
   return files;
 }
@@ -18,7 +19,7 @@ export function registerRuntimeCheckLauncherExists(server: McpServer): void {
     'runtime_check_launcher_exists',
     {
       title: 'Check Launcher File Existence',
-      description: `Check whether the launcher files that would be produced by 'runtime_generate_launcher' already exist in the project root. Read-only — does not create or overwrite anything.
+      description: `Check whether the launcher files that 'runtime_generate_launcher' would write already exist in the project root. Read-only — does not create or overwrite anything.
 
 USE WHEN:
 - Before invoking 'runtime_generate_launcher' — to detect potential overwrites and ask the user for confirmation
@@ -30,20 +31,17 @@ DO NOT USE FOR:
 - Reading the content of an existing launcher -> use generic Read tools
 - Checking if the server is currently running -> use 'runtime_check_status'
 
-The list of files depends on os + mode + name (name defaults to "server"):
-- windows + host: <name>-start.bat, <name>-stop.bat
-- windows + pm2:  <name>-start.bat, <name>-stop.bat, ecosystem.config.js
-- linux + host:   <name>-start.sh, <name>-stop.sh
-- linux + pm2:    <name>-start.sh, <name>-stop.sh, ecosystem.config.js
-For a name other than "server", the PM2 file is <name>.ecosystem.config.js.
+The list of files depends on runner + os:
+- terminal: launch-terminal.bat (windows), launch-terminal.sh (linux)
+- pm2:      launch-pm2.bat or launch-pm2.sh, plus ecosystem.config.js
+- os=both checks the .bat and the .sh file.
 
 NOTES:
-- When at least one file already exists, ask the user whether to overwrite (then call generate with overwrite=true).`,
+- When at least one file already exists, ask the user whether to overwrite (then call generate with force=true).`,
       inputSchema: {
         cwd: z.string().min(1).describe('Absolute path of the project folder root'),
-        os: z.enum(['windows', 'linux']).describe('Target OS for the launcher'),
-        mode: z.enum(['host', 'pm2']).describe('Runtime mode'),
-        name: launcherNameSchema,
+        runner: z.enum(['terminal', 'pm2']).default('terminal').describe('Runner passed to generate'),
+        os: z.enum(['windows', 'linux', 'both']).describe('Target OS passed to generate'),
       },
       annotations: {
         title: 'Check Launcher Files',
@@ -51,9 +49,9 @@ NOTES:
         idempotentHint: true,
       },
     },
-    async ({ cwd, os, mode, name }) => {
+    async ({ cwd, runner, os }) => {
       const projectCwd = resolve(cwd);
-      const files = getLauncherFiles(os, mode, name);
+      const files = getLauncherFiles(runner, os);
       const checked = await Promise.all(
         files.map(async (f) => {
           const path = join(projectCwd, f);
@@ -71,9 +69,8 @@ NOTES:
 
       const envelope = {
         cwd: projectCwd,
+        runner,
         os,
-        mode,
-        name,
         files: checked,
         any_exists: anyExists,
       };
@@ -90,9 +87,8 @@ NOTES:
             text: `${summary}
 
 Project path: ${projectCwd}
+Runner: ${runner}
 OS: ${os}
-Mode: ${mode}
-Launcher name: ${name}
 
 --- Existence Check (JSON) ---
 ${prettyJson}
@@ -101,10 +97,10 @@ ${prettyJson}
 For the assistant:
 - ${
               anyExists
-                ? 'Some files would be overwritten. Ask the user whether to overwrite (then call generate with overwrite: true).'
+                ? 'Some files would be overwritten. Ask the user whether to overwrite (then call generate with force: true).'
                 : 'No files would be overwritten. The user can proceed to generate.'
             }
-- File names follow the launcher name: <name>-start.{bat|sh}, <name>-stop.{bat|sh}, plus the PM2 ecosystem file for PM2 mode. Pass the same name to generate.
+- Pass the same runner and os to generate.
 - Match the user's language.`,
           },
         ],

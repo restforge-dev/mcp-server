@@ -123,8 +123,14 @@ function parsePm2Apps(stdout: string): Pm2App[] {
   }
 }
 
+// launcher create (platform issue-192) mendaftarkan backend sebagai <project>-server;
+// nama <project> polos milik ecosystem.config.js lama.
 function findProjectApp(apps: Pm2App[], projectName: string): Pm2App | null {
-  return apps.find((a) => a.name === projectName) ?? null;
+  return (
+    apps.find((a) => a.name === `${projectName}-server`) ??
+    apps.find((a) => a.name === projectName) ??
+    null
+  );
 }
 
 export function registerRuntimeCheckStatus(server: McpServer): void {
@@ -149,7 +155,7 @@ NOTES:
 - mode: 'auto' (default, host then pm2), 'host' (PID file and port), 'pm2' (needs 'project').
 - Current launchers write no PID file, so host detection relies on the port probe: pass 'port'. The probe binds on host_address (default 127.0.0.1); a port in use shows a process is listening, not that it is RESTForge.
 - 'health_path' with 'port' adds an HTTP GET probe reporting status and response time.
-- Summarise in one sentence: running, dead_pid (suggest the stop launcher or 'pm2 delete' first), http_unreachable (process up but probe failed: wrong port/path or still booting), or not_running (suggest a launcher for the user to run).`,
+- Summarise in one sentence: running, dead_pid (suggest the launcher stop action, e.g. launch-terminal stop or launch-pm2 stop, first), http_unreachable (process up but probe failed: wrong port/path or still booting), or not_running (suggest a launcher for the user to run).`,
       inputSchema: {
         cwd: z
           .string()
@@ -449,7 +455,7 @@ For the assistant:
 - Summarise the running state in plain language.
 - If state='running': confirm to the user that the server is up. If HTTP check was performed, mention it returned 2xx and the response time.
 - If state='http_unreachable': tell the user the process exists but the HTTP endpoint did not respond — suggest checking the server logs or that the health_path/port matches the actual config.
-- If state='dead_pid': tell the user there's a stale PID file (or PM2 app in non-online state). Suggest cleaning up by running the stop launcher (or 'pm2 delete' for PM2 mode), then starting the server again.
+- If state='dead_pid': tell the user there's a stale PID file (or PM2 app in non-online state). Suggest running the launcher stop action (launch-terminal stop, or launch-pm2 stop for PM2 mode), then start again.
 - If state='not_running': tell the user no server is currently running. Suggest generating a launcher (if not already done) and running it.
 - Do not paste the JSON unless the user explicitly asks. Do not mention internal tool names.
 - Match the user's language.`,
