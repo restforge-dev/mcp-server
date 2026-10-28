@@ -15,7 +15,7 @@ USE WHEN:
 - The user asks for a payload from a table ("buatkan payload dari table X", "generate payload guest_book")
 - A table was just created and the request covers building its API
 - Regenerating a payload after a schema change
-- A master-detail (header-detail) pair -> 'detail' with the detail table
+- A master-detail (header-detail) pair -> 'detail' with one or more detail tables
 
 DO NOT USE FOR:
 - Credentials in the env file -> 'setup_write_env'
@@ -26,7 +26,7 @@ DO NOT USE FOR:
 
 NOTES:
 - 'schemaPath' is required when the table has soft-delete columns (is_deleted, deleted_at, deleted_by): the softDelete block comes from the SDF, and the CLI fails without it. The SDF also supplies CHECK constraints for fieldValidation and checkConstraints; without an SDF that step is skipped.
-- 'detail' adds a masterDetail block, a detail query file, and composite actions. The detail table needs an FK to the master primary key. An existing masterDetail block is kept.
+- 'detail' adds a masterDetail block, one detail query file per table, and composite actions. Every detail table needs an FK to the master primary key. Each entry's cardinality (one/many) is derived from the SDF; read it in the generated RDF. An existing masterDetail block is kept.
 - 'output' other than payload/ means the file must be moved back before 'codegen_create_endpoint'.
 - JOIN columns are never generated here; use 'codegen_sync_payload' with expandFk.
 - With TENANT_MODE=multi, a table with a tenant_id column gets requestScope when the RDF has none, so 'codegen_create_endpoint' accepts it.`,
@@ -58,7 +58,7 @@ NOTES:
           .string()
           .min(1)
           .optional()
-          .describe('Detail table name for master-detail generation. When set, the generated payload also contains a masterDetail block derived from the detail table plus a generated detail query file, and the composite actions are enabled. Must differ from the table parameter and must reference the master table primary key by foreign key.'),
+          .describe('Detail table name, or several names separated by commas (e.g. vendor,customer), for master-detail generation. When set, the generated payload also contains a masterDetail block plus one detail query file per table, and the composite actions are enabled. Each table becomes one masterDetail.details[] entry with cardinality "one" when its foreignKey column has a single-column unique in the SDF, otherwise "many"; a single "many" table keeps the flat detailTable/detailConfig shape. Every table must differ from the table parameter and must reference the master table primary key by foreign key.'),
       },
       annotations: {
         title: 'Generate Payload',

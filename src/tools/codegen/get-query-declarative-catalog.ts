@@ -181,7 +181,7 @@ For the assistant:
   * Validate endpoint resolution priority when the user is unsure which query a given endpoint uses (e.g. \`/lookup\` does NOT use \`viewQuery\` — only \`viewName\` or \`tableName\`).
   * Validate database placeholders when the user uses file mode. There is no auto-conversion in file mode: PostgreSQL \`$1\`, MySQL \`?\`, Oracle \`:1\` must be native to the target database.
 - Filter notes for catalog consumers (avoid common pitfalls):
-  * \`queryProperties[].name\` is the last segment of the property path. For nested properties such as \`detailQuery\`, use the \`nestedPath\` field for the full path (\`masterDetail.detailConfig.detailQuery\`). The four top-level properties have \`nestedPath: null\`.
+  * \`queryProperties[].name\` is the last segment of the property path. For nested properties such as \`detailQuery\`, use the \`nestedPath\` field for the full path (\`masterDetail.detailConfig.detailQuery\`). In the multi-detail \`masterDetail.details[]\` shape the same property sits in each entry: \`masterDetail.details[].detailConfig.detailQuery\`. The four top-level properties have \`nestedPath: null\`.
   * \`endpointResolution[]\` has two entries for \`/read-composite\`: \`"/read-composite (header)"\` and \`"/read-composite (detail)"\`. Pick the one matching the user's question context.
   * \`fileReferenceConvention.applicableProperties\` lists the four properties that accept the \`file:\` prefix. \`viewName\` is intentionally excluded.
   * \`fileReferenceConvention.placeholderConversionRules\` distinguishes inline mode (auto-converts \`$1\` -> \`?\` / \`:1\` for backward compatibility) from file mode (no auto-conversion — placeholders must be native to the target database).
