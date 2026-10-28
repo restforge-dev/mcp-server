@@ -34,7 +34,7 @@ What this command does (in order):
 3. Writes auth middleware + router
 4. Writes 6 processors: register, login, refresh, logout, me, reset-password
 5. Injects auth env vars (random JWT_SECRET) into the config file
-6. Records bcrypt + jsonwebtoken as runtime dependencies
+6. Records bcryptjs + jsonwebtoken as runtime dependencies
 
 Preconditions:
 - The project folder must have @restforgejs/platform installed in node_modules.
