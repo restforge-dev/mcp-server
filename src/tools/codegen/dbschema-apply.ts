@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 // Pull one labelled block (e.g. 'Warnings:' or 'Summary:') out of the structured
 // human-readable stdout. The CLI prints the header on its own line and the block
@@ -66,8 +67,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         schemaPath: z
           .string()
           .min(1)
@@ -111,7 +112,7 @@ NOTES:
 
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested schema path: ${schemaPath}
 Requested table filter: ${table ?? 'all tables'}
 Requested dryRun: ${dryRun}
@@ -133,7 +134,7 @@ For the assistant:
         'schema',
         'apply',
         `--schema-path=${schemaPath}`,
-        `--config=${config}`,
+        ...configArgs(config),
       ];
       if (table !== undefined) cliArgs.push(`--table=${table}`);
       if (dryRun === true) cliArgs.push('--dry-run');
@@ -166,7 +167,7 @@ For the assistant:
               text: `Failed to apply schema drift to the database.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 Mode: ${dryRun ? 'dry-run' : 'apply'}
@@ -213,7 +214,7 @@ For the assistant:
               text: `Schema apply ${dryRun ? 'dry-run ' : ''}completed with skipped drift: some changes require explicit opt-in (this is a result, not an error).
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 Mode: ${dryRun ? 'dry-run (nothing applied)' : 'apply (additive statements WERE applied)'}
@@ -248,7 +249,7 @@ For the assistant:
               text: `Schema apply dry-run completed (no changes applied).
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 Mode: dry-run
@@ -276,7 +277,7 @@ For the assistant:
             text: `Schema apply completed successfully: all applicable drift was applied.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 Mode: apply

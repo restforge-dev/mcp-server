@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 function truncateSql(sql: string): string {
   return sql.length > 100 ? `${sql.substring(0, 100)}...` : sql;
@@ -40,8 +41,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         sql: z
           .string()
           .min(1)
@@ -70,7 +71,7 @@ NOTES:
 
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested sql (first 100 chars): ${sqlPreview}
 
 For the assistant:
@@ -88,7 +89,7 @@ For the assistant:
         'restforge',
         'query',
         'validate',
-        `--config=${config}`,
+        ...configArgs(config),
         `--sql=${sql}`,
         '--pretty=false',
       ];
@@ -114,7 +115,7 @@ For the assistant:
               text: `SQL was rejected before validation: only SELECT or WITH (CTE) statements are allowed.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Submitted SQL (first 100 chars): ${sqlPreview}
 
 For the assistant:
@@ -138,7 +139,7 @@ For the assistant:
               text: `Failed to validate the SQL.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Submitted SQL (first 100 chars): ${sqlPreview}
 Command: ${result.command}
 Exit code: ${result.exitCode}
@@ -178,7 +179,7 @@ For the assistant:
               text: `Failed to parse the SQL validation result as JSON.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Reason: ${msg}
 
 --- Raw stdout ---
@@ -216,7 +217,7 @@ For the assistant:
               text: `SQL validation succeeded — the statement is syntactically and semantically valid against the live database schema.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Database: ${databaseType}
 ok: true
 
@@ -242,7 +243,7 @@ For the assistant:
             text: `SQL validation reported an error — the statement is not valid against the live database schema.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Database: ${databaseType}
 ok: false
 errorCode: ${errorCode}

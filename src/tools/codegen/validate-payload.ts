@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenValidatePayload(server: McpServer): void {
   server.registerTool(
@@ -33,8 +34,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name (relative to project) used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         table: z
           .string()
           .min(1)
@@ -64,7 +65,7 @@ NOTES:
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
 Requested table: ${table ?? 'all'}
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 
 For the assistant:
 - The user needs to install the RESTForge package before payload files can be validated against the database schema.
@@ -79,7 +80,7 @@ For the assistant:
       // Forward only the arguments the user supplied. Defaults inside restforge
       // (e.g. payload/ as the default output dir, all files when --table is omitted)
       // should remain in effect when the user does not specify them. per §3.5
-      const args = ['restforge', 'payload', 'validate', `--config=${config}`];
+      const args = ['restforge', 'payload', 'validate', ...configArgs(config)];
       if (table) args.push(`--table=${table}`);
 
       const result = await execProcess('npx', args, { cwd: projectCwd, timeout: 30_000 });
@@ -93,7 +94,7 @@ For the assistant:
               text: `Failed to validate payload.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 Command: ${result.command}
 Exit code: ${result.exitCode}
@@ -126,7 +127,7 @@ For the assistant:
             text: `Payload validation completed.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 Command: ${result.command}
 

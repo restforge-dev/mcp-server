@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { readFile, writeFile, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { resolveDefaultConfig } from '../../lib/default-config.js';
 import {
   parseEnvFile,
   serializeEnvFile,
@@ -16,7 +17,7 @@ export function registerSetupUpdateEnv(server: McpServer): void {
     'setup_update_env',
     {
       title: 'Update Database Connection Env',
-      description: `Apply a partial update to config/db-connection.env. Accepts an arbitrary set of key/value pairs and merges them into the existing file, preserving comments, blank lines, and untouched parameters.
+      description: `Apply a partial update to a config .env file (configFile, or the project default recorded by config set-default). Accepts an arbitrary set of key/value pairs and merges them into the existing file, preserving comments, blank lines, and untouched parameters.
 
 USE WHEN:
 - Toggling individual feature flags (e.g. LIVE_SYNC_ENABLED, REDIS_ENABLED, KAFKA_ENABLED)
@@ -36,8 +37,9 @@ NOTES:
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z
           .string()
-          .default('db-connection.env')
-          .describe('Config file name in the config/ folder. Default: db-connection.env'),
+          .min(1)
+          .optional()
+          .describe('Config file name in the config/ folder. When omitted, the default recorded by config set-default is used.'),
         fields: z
           .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
           .refine((obj) => Object.keys(obj).length > 0, {
@@ -53,7 +55,34 @@ NOTES:
     },
     async ({ cwd, configFile, fields }) => {
       const projectCwd = resolve(cwd);
-      const envPath = join(projectCwd, 'config', configFile);
+
+      // Without configFile, the file is the project default from config set-default,
+      // the same one the CLI tools fall back to.
+      let envPath: string;
+      if (configFile) {
+        envPath = join(projectCwd, 'config', configFile);
+      } else {
+        const resolved = await resolveDefaultConfig(projectCwd);
+        if (!resolved.ok) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Precondition not met: no config file was given and the project default could not be resolved.
+
+Project path: ${projectCwd}
+Reason: ${resolved.reason}
+
+For the assistant:
+- List the config files in the project and ask the user which one to update, then retry with that file name, or record it as the default first.
+- Do not mention internal tool names.`,
+              },
+            ],
+            isError: false,
+          };
+        }
+        envPath = resolved.path;
+      }
 
       // Precondition check: the config file must exist before it can be updated.
       // Treated as a non-error precondition per the authoring guide §3.4.

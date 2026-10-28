@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 // Extract a printable name from a drift item. Items in onlyInSdf/onlyInDb/mismatched
 // can be plain strings or objects depending on the section; fall back to JSON for
@@ -110,8 +111,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         schemaPath: z
           .string()
           .min(1)
@@ -143,7 +144,7 @@ NOTES:
 
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested schema path: ${schemaPath}
 Requested table filter: ${table ?? 'all tables'}
 
@@ -165,7 +166,7 @@ For the assistant:
         'schema',
         'diff',
         `--schema-path=${schemaPath}`,
-        `--config=${config}`,
+        ...configArgs(config),
         '--json',
       ];
       if (table !== undefined) cliArgs.push(`--table=${table}`);
@@ -195,7 +196,7 @@ For the assistant:
               text: `Failed to diff schema against the database.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 Command: ${result.command}
@@ -240,7 +241,7 @@ For the assistant:
               text: `Failed to parse the schema drift report as JSON.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Exit code: ${result.exitCode}
 Reason: ${msg}
@@ -282,7 +283,7 @@ For the assistant:
               text: `Schema drift check completed: no drift detected.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 totalTables: ${totalTables}
@@ -308,7 +309,7 @@ For the assistant:
             text: `Schema drift check completed: drift detected (this is a result, not an error).
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema path: ${schemaPath}
 Table filter: ${table ?? 'all tables'}
 totalTables: ${totalTables}

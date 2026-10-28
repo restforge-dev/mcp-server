@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenDiffPayload(server: McpServer): void {
   server.registerTool(
@@ -23,7 +24,7 @@ DO NOT USE FOR:
 - Generating a payload from scratch for a table that has no payload yet -> use 'codegen_generate_payload'
 - Applying the changes to payload files -> use 'codegen_sync_payload'
 
-This tool runs: npx restforge payload diff --config=<config> [--table=<table>] in the given cwd.
+This tool runs: npx restforge payload diff [--config=<config>] [--table=<table>] in the given cwd.
 The CLI reads existing payload JSON files from the project payload/ directory, connects to the database described
 in the config file, and prints a per-column diff (added, removed, or type-changed columns) without
 modifying any file. The CLI typically uses '[+]' for added columns, '[-]' for removed columns,
@@ -31,7 +32,7 @@ and '[~]' for type-changed columns.
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The config file (default 'db-connection.env') must exist in the project and contain valid
+- The config file (given, or the default recorded by config set-default) must exist and contain valid
   database credentials. This tool does not pre-check that — if the CLI fails, the failure response
   will surface the underlying cause.`,
       inputSchema: {
@@ -42,8 +43,8 @@ Preconditions:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name (relative to project) used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         table: z
           .string()
           .min(1)
@@ -73,7 +74,7 @@ Preconditions:
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
 Requested table: ${table ?? 'all'}
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 
 For the assistant:
 - The user needs to install the RESTForge package before column-level differences can be computed against the database schema.
@@ -88,7 +89,7 @@ For the assistant:
       // Forward only the arguments the user supplied. Defaults inside restforge
       // (e.g. payload/ as the default output dir, all files when --table is omitted)
       // should remain in effect when the user does not specify them. per §3.5
-      const args = ['restforge', 'payload', 'diff', `--config=${config}`];
+      const args = ['restforge', 'payload', 'diff', ...configArgs(config)];
       if (table) args.push(`--table=${table}`);
 
       const result = await execProcess('npx', args, { cwd: projectCwd, timeout: 30_000 });
@@ -102,7 +103,7 @@ For the assistant:
               text: `Failed to diff payload.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 Command: ${result.command}
 Exit code: ${result.exitCode}
@@ -135,7 +136,7 @@ For the assistant:
             text: `Payload diff completed.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 Command: ${result.command}
 

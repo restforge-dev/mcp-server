@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 import { createServer } from 'node:net';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 interface PreflightResult {
   config_validation: {
@@ -61,7 +62,7 @@ export function registerRuntimeValidatePreflight(server: McpServer): void {
     'runtime_validate_preflight',
     {
       title: 'Validate RESTForge Runtime Preflight',
-      description: `Run a runtime preflight check before generating a launcher. Wraps 'npx restforge validate --config=<config>' (license + database + redis/kafka) and additionally inspects: (1) .restforge/server.pid to detect a possibly-running server, (2) optional local port availability via Node net binding.
+      description: `Run a runtime preflight check before generating a launcher. Wraps 'npx restforge validate [--config=<config>]' (license + database + redis/kafka) and additionally inspects: (1) .restforge/server.pid to detect a possibly-running server, (2) optional local port availability via Node net binding.
 
 USE WHEN:
 - Before invoking 'runtime_generate_launcher' — to verify the project is ready to launch
@@ -74,11 +75,11 @@ DO NOT USE FOR:
 - Listing or reading config values -> use 'setup_read_env'
 - Generating launcher files -> use 'runtime_generate_launcher'
 
-This tool runs: npx restforge validate --config=<config> in the given cwd, plus filesystem checks (PID file, optional port).
+This tool runs: npx restforge validate [--config=<config>] in the given cwd, plus filesystem checks (PID file, optional port).
 
 Preconditions:
 - The project must have @restforgejs/platform installed in node_modules.
-- The config file must exist in the config/ folder.
+- The config file (given, or the default recorded by config set-default) must exist.
 
 NOTES:
 - Summarise by component: license, database, optional redis/kafka, PID file presence, port availability.
@@ -90,8 +91,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name in the config/ folder (default: db-connection.env)'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         port: z
           .number()
           .int()
@@ -152,7 +153,7 @@ For the assistant:
 
       const cliResult = await execProcess(
         'npx',
-        ['restforge', 'validate', `--config=${config}`],
+        ['restforge', 'validate', ...configArgs(config)],
         { cwd: projectCwd, timeout: 30_000 }
       );
       result.config_validation = {
@@ -220,7 +221,7 @@ For the assistant:
             text: `${summary}
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Port checked: ${port ?? '(not requested)'}
 Config validation: ${result.config_validation.success ? 'OK' : 'FAILED'}
 PID file: ${pidFileSummary}

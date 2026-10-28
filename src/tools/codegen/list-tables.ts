@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenListTables(server: McpServer): void {
   server.registerTool(
@@ -35,8 +36,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         schema: z
           .string()
           .min(1)
@@ -69,7 +70,7 @@ NOTES:
 
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested schema filter: ${schema ?? 'all user-owned schemas'}
 Requested includeSystem: ${includeSystem ?? false}
 
@@ -91,7 +92,7 @@ For the assistant:
         'restforge',
         'schema',
         'list',
-        `--config=${config}`,
+        ...configArgs(config),
         '--format=json',
       ];
       if (schema !== undefined) cliArgs.push(`--schema=${schema}`);
@@ -117,7 +118,7 @@ For the assistant:
               text: `Failed to list database tables.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Schema filter: ${schema ?? 'all user-owned schemas'}
 includeSystem: ${includeSystem ?? false}
 Command: ${result.command}
@@ -158,7 +159,7 @@ For the assistant:
               text: `Failed to parse the database table list as JSON.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Reason: ${msg}
 
 --- Raw stdout ---
@@ -197,7 +198,7 @@ For the assistant:
             text: `Database tables retrieved successfully.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Database: ${databaseType}
 Schema filter: ${schema ?? 'all user-owned schemas'}
 totalTables: ${totalTables}

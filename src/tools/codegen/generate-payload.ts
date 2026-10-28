@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenGeneratePayload(server: McpServer): void {
   server.registerTool(
@@ -42,8 +43,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name (relative to project) used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         output: z
           .string()
           .min(1)
@@ -83,7 +84,7 @@ NOTES:
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
 Requested table: ${table}
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 
 For the assistant:
 - The user needs to install the RESTForge package before a payload can be generated from a table schema.
@@ -97,7 +98,7 @@ For the assistant:
 
       // Optional flags are only appended when the caller set them, so a call without
       // them produces exactly the same CLI invocation as before.
-      const cliArgs = ['restforge', 'payload', 'generate', `--table=${table}`, `--config=${config}`];
+      const cliArgs = ['restforge', 'payload', 'generate', `--table=${table}`, ...configArgs(config)];
       if (output !== undefined) cliArgs.push(`--output=${output}`);
       if (schemaPath !== undefined) cliArgs.push(`--schema-path=${schemaPath}`);
       if (detail !== undefined) cliArgs.push(`--detail=${detail}`);
@@ -114,7 +115,7 @@ For the assistant:
 
 Project path: ${projectCwd}
 Table: ${table}
-Config: ${config}
+Config: ${configLabel(config)}
 Command: ${result.command}
 Exit code: ${result.exitCode}
 
@@ -146,7 +147,7 @@ For the assistant:
 
 Project path: ${projectCwd}
 Table: ${table}
-Config: ${config}
+Config: ${configLabel(config)}
 Output directory: ${output ?? 'payload/ (CLI default)'}
 Schema path (SDF): ${schemaPath ?? 'schema (CLI default)'}
 Detail table (master-detail): ${detail ?? '(not requested)'}

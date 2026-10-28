@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenDescribeTable(server: McpServer): void {
   server.registerTool(
@@ -36,8 +37,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         table: z
           .string()
           .min(1)
@@ -74,7 +75,7 @@ NOTES:
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
 Requested table: ${table}
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested includeForeignKeys: ${includeForeignKeys ?? 'default (true)'}
 Requested includeIndexes: ${includeIndexes ?? 'default (true)'}
 
@@ -94,7 +95,7 @@ For the assistant:
         'restforge',
         'schema',
         'describe',
-        `--config=${config}`,
+        ...configArgs(config),
         `--table=${table}`,
       ];
       if (includeForeignKeys !== undefined) cliArgs.push(`--include-foreign-keys=${includeForeignKeys}`);
@@ -120,7 +121,7 @@ For the assistant:
               text: `Failed to describe the database table.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table}
 includeForeignKeys: ${includeForeignKeys ?? 'default (true)'}
 includeIndexes: ${includeIndexes ?? 'default (true)'}
@@ -163,7 +164,7 @@ For the assistant:
               text: `Failed to parse the table description as JSON.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table}
 Reason: ${msg}
 
@@ -227,7 +228,7 @@ For the assistant:
             text: `Table description retrieved successfully.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Database: ${databaseType}
 Table: ${tableSchema}.${tableName} (${tableType})
 columnsCount: ${columnsCount}

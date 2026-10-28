@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenSyncPayload(server: McpServer): void {
   server.registerTool(
@@ -35,8 +36,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name (relative to project) used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         table: z
           .string()
           .min(1)
@@ -82,7 +83,7 @@ NOTES:
               text: `Precondition not met: FK expansion needs a specific table.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Requested: expandFk without a table
 
 For the assistant:
@@ -104,7 +105,7 @@ For the assistant:
               text: `Precondition not met: skipping FK relations needs FK expansion.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Requested: expandFkSkip without expandFk
 
 For the assistant:
@@ -131,7 +132,7 @@ For the assistant:
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
 Requested table: ${table ?? 'all'}
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 
 For the assistant:
 - The user needs to install the RESTForge package before payload files can be synced with the database schema.
@@ -146,7 +147,7 @@ For the assistant:
       // Forward only the arguments the user supplied. Defaults inside restforge
       // (e.g. payload/ as the default output dir, all files when --table is omitted)
       // should remain in effect when the user does not specify them. per §3.5
-      const args = ['restforge', 'payload', 'sync', `--config=${config}`];
+      const args = ['restforge', 'payload', 'sync', ...configArgs(config)];
       if (table) args.push(`--table=${table}`);
       if (schemaPath) args.push(`--schema-path=${schemaPath}`);
       if (expandFk) {
@@ -169,7 +170,7 @@ For the assistant:
               text: `Failed to sync payload.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 Command: ${result.command}
 Exit code: ${result.exitCode}
@@ -206,7 +207,7 @@ For the assistant:
             text: `Payload sync completed.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Table: ${table ?? 'all'}
 FK expansion: ${expandFk ? `on${fkColumns ? ` (fk-columns: ${fkColumns})` : ' (auto-resolved display columns)'}${expandFkSkip ? ` (skipped: ${expandFkSkip})` : ''}` : 'off'}
 Command: ${result.command}

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { readFile, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { resolveDefaultConfig } from '../../lib/default-config.js';
 import { parseEnvFile, isSensitiveKey, maskValue } from '../../lib/env-parser.js';
 
 export function registerSetupReadEnv(server: McpServer): void {
@@ -9,7 +10,7 @@ export function registerSetupReadEnv(server: McpServer): void {
     'setup_read_env',
     {
       title: 'Read Database Connection Env',      
-      description: `Read and parse the config/db-connection.env file, returning all parameters as KEY=value lines. Sensitive fields (LICENSE, DB_PASSWORD, REDIS_PASSWORD, KAFKA_SASL_PASSWORD) are masked by default.
+      description: `Read and parse a config .env file (configFile, or the project default recorded by config set-default), returning all parameters as KEY=value lines. Sensitive fields (LICENSE, DB_PASSWORD, REDIS_PASSWORD, KAFKA_SASL_PASSWORD) are masked by default.
 
 USE WHEN:
 - The user asks to see the active/current configuration, parameters, 
@@ -37,8 +38,9 @@ NOTES:
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z
           .string()
-          .default('db-connection.env')
-          .describe('Config file name in the config/ folder. Default: db-connection.env'),
+          .min(1)
+          .optional()
+          .describe('Config file name in the config/ folder. When omitted, the default recorded by config set-default is used.'),
         unmask: z
           .boolean()
           .default(false)
@@ -52,7 +54,34 @@ NOTES:
     },
     async ({ cwd, configFile, unmask }) => {
       const projectCwd = resolve(cwd);
-      const envPath = join(projectCwd, 'config', configFile);
+
+      // Without configFile, the file is the project default from config set-default,
+      // the same one the CLI tools fall back to.
+      let envPath: string;
+      if (configFile) {
+        envPath = join(projectCwd, 'config', configFile);
+      } else {
+        const resolved = await resolveDefaultConfig(projectCwd);
+        if (!resolved.ok) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Precondition not met: no config file was given and the project default could not be resolved.
+
+Project path: ${projectCwd}
+Reason: ${resolved.reason}
+
+For the assistant:
+- List the config files in the project and ask the user which one to read, then retry with that file name, or record it as the default first.
+- Do not mention internal tool names.`,
+              },
+            ],
+            isError: false,
+          };
+        }
+        envPath = resolved.path;
+      }
 
       // Precondition check: the config file must exist before it can be read.
       // Treated as a non-error precondition per the authoring guide §3.4.

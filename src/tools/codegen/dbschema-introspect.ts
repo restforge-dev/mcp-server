@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { configArgs, configLabel } from '../../lib/default-config.js';
 
 export function registerCodegenDbschemaIntrospect(server: McpServer): void {
   server.registerTool(
@@ -36,8 +37,8 @@ NOTES:
         config: z
           .string()
           .min(1)
-          .default('db-connection.env')
-          .describe('Config file name relative to the project, used by the CLI to connect to the database'),
+          .optional()
+          .describe('Config file name relative to the project, used by the CLI to connect to the database. When omitted, the CLI uses the default recorded by config set-default.'),
         schemaPath: z
           .string()
           .min(1)
@@ -86,7 +87,7 @@ NOTES:
 
 Project path: ${projectCwd}
 Expected location: node_modules/@restforgejs/platform
-Requested config: ${config}
+Requested config: ${configLabel(config)}
 Requested schemaPath: ${schemaPath}
 Requested table: ${table ?? '(none)'}
 Requested schema: ${schema ?? '(none)'}
@@ -106,7 +107,7 @@ For the assistant:
 
       // Forward only the arguments the user supplied. The CLI handles mode resolution
       // and mutual-exclusivity rules. per §3.5
-      const cliArgs = ['restforge', 'schema', 'introspect', `--config=${config}`, `--schema-path=${schemaPath}`];
+      const cliArgs = ['restforge', 'schema', 'introspect', ...configArgs(config), `--schema-path=${schemaPath}`];
       if (table !== undefined) cliArgs.push(`--table=${table}`);
       if (schema !== undefined) cliArgs.push(`--schema=${schema}`);
       if (allSchemas === true) cliArgs.push('--all-schemas');
@@ -144,7 +145,7 @@ For the assistant:
               text: `Failed to introspect the database.
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 SchemaPath: ${schemaPath}
 Table: ${table ?? '(none)'}
 Schema: ${schema ?? '(none)'}
@@ -208,7 +209,7 @@ For the assistant:
             text: `${summaryHeading}
 
 Project path: ${projectCwd}
-Config: ${config}
+Config: ${configLabel(config)}
 Mode: ${modeLabel}
 Schema path: ${schemaPath}
 Table: ${table ?? '(not specified)'}

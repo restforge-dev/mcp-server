@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execProcess } from '../../lib/exec.js';
+import { DEFAULT_CONFIG_LABEL } from '../../lib/default-config.js';
 
 export function registerSetupValidateConfig(server: McpServer): void {
   server.registerTool(
@@ -30,8 +31,9 @@ NOTES:
         cwd: z.string().min(1).describe('Absolute path of the project folder'),
         configFile: z
           .string()
-          .default('db-connection.env')
-          .describe('Config file name in the config/ folder. Default: db-connection.env'),
+          .min(1)
+          .optional()
+          .describe('Config file name in the config/ folder. When omitted, the CLI uses the default recorded by config set-default.'),
         autoCreateDb: z
           .boolean()
           .optional()
@@ -45,12 +47,13 @@ NOTES:
     },
     async ({ cwd, configFile, autoCreateDb }) => {
       const projectCwd = resolve(cwd);
-      const configPath = join(projectCwd, 'config', configFile);
+      const configPath = configFile ? join(projectCwd, 'config', configFile) : DEFAULT_CONFIG_LABEL;
 
-      // Precondition check: the config file must exist before it can be validated.
-      // Treated as a non-error precondition per the authoring guide §3.4.
+      // Precondition check: an explicit config file must exist before it can be validated.
+      // Treated as a non-error precondition per the authoring guide §3.4. Without configFile
+      // the CLI resolves the project default and reports a missing default itself.
       try {
-        await access(configPath);
+        if (configFile) await access(configPath);
       } catch {
         return {
           content: [
@@ -74,7 +77,8 @@ For the assistant:
       // The runtime parser matches '--auto-create-db' as a bare token (no '=value' form),
       // and the flag is only appended when explicitly requested, so the default call
       // produces exactly the same CLI invocation as before.
-      const cliArgs = ['restforge', 'validate', `--config=${configFile}`];
+      const cliArgs = ['restforge', 'validate'];
+      if (configFile) cliArgs.push(`--config=${configFile}`);
       if (autoCreateDb === true) cliArgs.push('--auto-create-db');
 
       const result = await execProcess('npx', cliArgs, { cwd: projectCwd, timeout: 30_000 });
@@ -104,6 +108,7 @@ For the assistant:
 - Tell the user that the validation reported one or more problems.
 - Summarise the likely failing component in plain language (license, database, redis, kafka) based on the CLI output; do not paste the raw stdout/stderr unless the user explicitly asks.
 - Do not echo license keys, passwords, or full connection URIs from the output into chat.
+- When no config file was given and the CLI reports that no default config is set, list the config files, ask the user which one to use, record it as the default, then validate again.
 - Suggest reviewing or updating the relevant credentials and retrying. Do not mention internal tool names.`,
             },
           ],
